@@ -1,0 +1,88 @@
+# Twitter 自动发推系统配置文件示例
+# 复制此文件为 config.yaml 并填入真实的 API 凭据
+
+# Twitter API 配置
+twitter:
+  # Twitter API v2 Bearer Token
+  # 获取方式：https://developer.twitter.com/en/portal/dashboard
+  bearer_token: "AAAAAAAAAAAAAAAAAAAAAA%2FAAAAAAAAAA%3DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  
+  # Twitter API v2 Access Token
+  access_token: "1234567890123456789-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  
+  # Twitter API v2 Access Token Secret
+  access_token_secret: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  
+  # Twitter API v2 Consumer Key (API Key)
+  consumer_key: "AAAAAAAAAAAAAAAAAAAAAAAAA"
+  
+  # Twitter API v2 Consumer Secret (API Secret)
+  consumer_secret: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+# OpenAI API 配置
+openai:
+  # OpenAI API Key
+  # 获取方式：https://platform.openai.com/api-keys
+  api_key: "sk-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  
+  # 使用的模型
+  model: "gpt-3.5-turbo"
+  
+  # 生成推文的提示词
+  prompt_template: |
+    请生成一条有趣且有价值的推文，内容应该：
+    1. 长度在100-280字符之间
+    2. 包含实用信息或有趣观点
+    3. 适合在Twitter上分享
+    4. 语言风格轻松友好
+    
+    主题可以是：技术、生活感悟、学习心得、行业观察等。
+    请直接返回推文内容，不要包含其他说明文字。
+
+# 代理配置
+proxy:
+  # SOCKS5 代理地址，格式：socks5://user:pass@ip:port
+  # 如果不需要认证，格式：socks5://ip:port
+  # 示例：socks5://username:password@127.0.0.1:1080
+  socks5_url: "socks5://127.0.0.1:1080"
+  
+  # 是否启用代理（如果不需要代理，设置为 false）
+  enabled: false
+
+# 定时任务配置
+scheduler:
+  # 每天发推次数
+  tweets_per_day: 2
+  
+  # 发推时间点（24小时制）
+  tweet_times:
+    - "09:00"  # 上午9点
+    - "18:00"  # 下午6点
+  
+  # 时区设置
+  timezone: "Asia/Shanghai"
+
+# Flask 应用配置
+flask:
+  # 服务器主机（0.0.0.0 表示接受所有IP访问）
+  host: "0.0.0.0"
+  
+  # 服务器端口
+  port: 5000
+  
+  # 调试模式（生产环境建议设置为 false）
+  debug: false
+
+# 日志配置
+logging:
+  # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  
+  # 日志文件路径
+  file_path: "logs/twitter_bot.log"
+  
+  # 日志格式
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # 是否同时输出到控制台
+  console_output: true
