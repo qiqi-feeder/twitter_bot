@@ -125,25 +125,45 @@ def save_tokens(access_token: str, refresh_token: str, expires_in: int):
 
 def main():
     """主函数"""
+    print("=" * 60)
     print("🔐 Twitter OAuth 2.0 授权工具")
     print("=" * 60)
-    
+    print("\n本工具将帮助您完成 Twitter OAuth 2.0 授权流程")
+    print("获取 access_token 和 refresh_token\n")
+
     # 加载配置
+    print("📋 检查配置...")
+    print("-" * 60)
+
     config = load_config()
     if not config:
+        print("\n💡 提示: 请先配置 Client ID 和 Client Secret")
+        print("   详细步骤请参考: docs/GET_STARTED.md")
         return
-    
+
     twitter_config = config.get('twitter', {})
-    
+
     # 获取 Client ID
-    client_id = twitter_config.get('client_id')
-    if not client_id:
-        print("❌ 配置文件中未找到 client_id")
-        print("请在 config/config.yaml 中配置 twitter.client_id")
+    client_id = twitter_config.get('client_id', '').strip()
+    if not client_id or client_id == 'your_client_id_here':
+        print("❌ 未配置有效的 Client ID\n")
+        print("📝 配置步骤:")
+        print("   1. 访问 https://developer.twitter.com/en/portal/dashboard")
+        print("   2. 创建或选择您的应用")
+        print("   3. 在 'Keys and tokens' 或 'Settings' 中找到 OAuth 2.0 Client ID")
+        print("   4. 打开 config/config.yaml，将 Client ID 填入 twitter.client_id")
+        print("\n详细指南: docs/GET_STARTED.md")
         return
-    
+
+    print(f"✅ Client ID: {client_id[:30]}...")
+
     # 获取 Client Secret（可选）
-    client_secret = twitter_config.get('client_secret')
+    client_secret = twitter_config.get('client_secret', '').strip()
+    if not client_secret or client_secret == 'your_client_secret_here':
+        print("⚠️  未配置 Client Secret（将使用公共客户端模式）")
+        client_secret = None
+    else:
+        print(f"✅ Client Secret: {client_secret[:20]}...")
     
     # 回调 URI
     redirect_uri = "http://localhost:8080/callback"
@@ -160,20 +180,34 @@ def main():
     )
     
     # 生成授权 URL
-    print("\n📋 步骤 1: 获取授权")
+    print("\n📋 步骤 1: 浏览器授权")
     print("-" * 60)
-    
+
     scopes = ['tweet.read', 'tweet.write', 'users.read', 'offline.access']
     auth_url = oauth_client.get_authorization_url(scopes=scopes)
-    
+
     print(f"\n请在浏览器中打开以下 URL 进行授权：\n")
     print(f"🔗 {auth_url}\n")
-    print("授权后，浏览器将自动跳转到本地回调地址。")
-    print("请不要关闭此程序，等待授权完成...\n")
+    print("📌 授权步骤:")
+    print("   1. 复制上面的 URL 到浏览器")
+    print("   2. 登录您的 Twitter 账号（如果未登录）")
+    print("   3. 点击 'Authorize app' 授权应用")
+    print("   4. 浏览器会自动跳转到 http://localhost:8080/callback")
+    print("   5. 等待本程序自动完成后续步骤\n")
+    print("⚠️  请不要关闭此程序，等待授权完成...\n")
 
     # 启动本地 HTTP 服务器接收回调
     print("📡 启动本地回调服务器 (http://localhost:8080)...")
-    server = HTTPServer(('localhost', 8080), CallbackHandler)
+
+    try:
+        server = HTTPServer(('localhost', 8080), CallbackHandler)
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print("\n❌ 端口 8080 已被占用")
+            print("   请关闭占用端口的程序，或修改回调端口")
+        else:
+            print(f"\n❌ 启动服务器失败: {e}")
+        return
 
     # 等待一次请求
     server.handle_request()

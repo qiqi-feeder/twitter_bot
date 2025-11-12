@@ -55,42 +55,69 @@ twitter_auto_poster/
 - Twitter Developer Account (API v2 访问权限)
 - OpenAI API Key
 
-## 安装步骤
+## 🚀 快速开始
 
-### 1. 克隆项目
-
-```bash
-git clone <repository-url>
-cd twitter_auto_poster
-```
-
-### 2. 创建虚拟环境
+### 方式 1: 一键设置（推荐新用户）
 
 ```bash
-python -m venv venv
+# 1. 克隆项目
+git clone https://github.com/qiqi-feeder/twitter_bot.git
+cd twitter_bot
 
-# Windows
-venv\Scripts\activate
+# 2. 安装依赖
+pip install -r requirements.txt
 
-# Linux/Mac
-source venv/bin/activate
+# 3. 运行完整设置向导
+python tools/complete_setup.py
 ```
 
-### 3. 安装依赖
+设置向导会自动引导您完成：
+- ✅ 配置 Twitter OAuth 2.0 凭据 (Client ID & Secret)
+- ✅ 浏览器授权获取 Access Token
+- ✅ 验证配置是否正确
+
+### 方式 2: 分步设置
+
+#### 步骤 1: 克隆项目
+
+```bash
+git clone https://github.com/qiqi-feeder/twitter_bot.git
+cd twitter_bot
+```
+
+#### 步骤 2: 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. 配置系统
+#### 步骤 3: 配置 OAuth 2.0 凭据
 
-复制配置文件并填入你的 API 凭据：
+运行配置向导：
 
 ```bash
-cp config/config.yaml config/config.yaml.local
+python tools/setup_config.py
 ```
 
-编辑 `config/config.yaml`，填入以下信息：
+或手动编辑 `config/config.yaml`，填入您的 Twitter App 凭据。
+
+#### 步骤 4: 获取 Access Token
+
+运行授权工具：
+
+```bash
+python tools/oauth2_authorize.py
+```
+
+在浏览器中完成授权后，Token 会自动保存。
+
+#### 步骤 5: 验证配置
+
+```bash
+python tools/quick_test.py
+```
+
+## 详细配置说明
 
 #### Twitter API 配置
 
