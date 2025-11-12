@@ -243,15 +243,37 @@ GET /tweets/recent?count=5
 
 ## 配置说明
 
-### 定时任务配置
+### 定时任务配置（支持时区设置）
 
 ```yaml
 scheduler:
-  tweets_per_day: 2
+  tweets_per_day: 1
   tweet_times:
-    - "09:00"  # 上午9点
-    - "18:00"  # 下午6点
-  timezone: "Asia/Shanghai"
+    - "08:00"  # 早上8点（基于设置的时区）
+
+  # 时区设置 - 支持美国时间
+  # America/New_York - 美国东部时间 (EST/EDT)
+  # America/Los_Angeles - 美国太平洋时间 (PST/PDT)
+  # America/Chicago - 美国中部时间 (CST/CDT)
+  # America/Denver - 美国山地时间 (MST/MDT)
+  # Asia/Shanghai - 中国时间
+  timezone: "America/New_York"
+
+  # 固定推文内容（可选）
+  # 如果设置，则每次发送固定内容
+  # 如果为 null 或删除此行，则使用 LLM 生成
+  fixed_content: "Good morning! 🌅 Have a great day! #DailyGreeting"
+```
+
+**重要说明**:
+- ✅ 系统会按照配置的时区执行任务，与服务器所在时区无关
+- ✅ 自动处理夏令时转换
+- ✅ 支持固定内容或 LLM 生成内容
+- 📖 详细说明：[时区设置指南](docs/SCHEDULER_TIMEZONE_GUIDE.md)
+
+**测试时区设置**:
+```bash
+python tools/test_scheduler.py
 ```
 
 ### 推文生成配置

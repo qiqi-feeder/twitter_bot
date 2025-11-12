@@ -68,15 +68,28 @@ proxy:
 # 定时任务配置
 scheduler:
   # 每天发推次数
-  tweets_per_day: 2
-  
-  # 发推时间点（24小时制）
+  tweets_per_day: 1
+
+  # 发推时间点（24小时制，基于设置的时区）
   tweet_times:
-    - "09:00"  # 上午9点
-    - "18:00"  # 下午6点
-  
+    - "08:00"  # 早上8点（美国时间）
+
   # 时区设置
-  timezone: "Asia/Shanghai"
+  # 美国时区选项:
+  #   - America/New_York (东部时间 EST/EDT)
+  #   - America/Los_Angeles (太平洋时间 PST/PDT)
+  #   - America/Chicago (中部时间 CST/CDT)
+  #   - America/Denver (山地时间 MST/MDT)
+  # 其他时区:
+  #   - Asia/Shanghai (中国)
+  #   - Europe/London (英国)
+  #   - UTC (协调世界时)
+  timezone: "America/New_York"
+
+  # 固定推文内容（如果设置，则每次发送固定内容；如果为空或null，则使用LLM生成）
+  # 留空或设置为 null 将使用 LLM 自动生成内容
+  fixed_content: "Good morning! 🌅 Have a great day! #DailyGreeting"
+  # fixed_content: null  # 使用 LLM 生成内容
 
 # Flask 应用配置
 flask:
