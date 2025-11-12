@@ -45,19 +45,18 @@ class OAuth2Client:
     def _generate_pkce_params(self) -> Tuple[str, str]:
         """
         生成 PKCE (Proof Key for Code Exchange) 参数
-        
+        使用 plain 方法（code_challenge = code_verifier）
+
         Returns:
             (code_verifier, code_challenge) 元组
         """
         # 生成 code_verifier (43-128 个字符)
         code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
         code_verifier = code_verifier.rstrip('=')
-        
-        # 生成 code_challenge (SHA256 哈希)
-        code_challenge_bytes = hashlib.sha256(code_verifier.encode('utf-8')).digest()
-        code_challenge = base64.urlsafe_b64encode(code_challenge_bytes).decode('utf-8')
-        code_challenge = code_challenge.rstrip('=')
-        
+
+        # 使用 plain 方法：code_challenge 直接等于 code_verifier
+        code_challenge = code_verifier
+
         return code_verifier, code_challenge
     
     def get_authorization_url(self, scopes: list = None) -> str:
@@ -87,7 +86,7 @@ class OAuth2Client:
             'scope': ' '.join(scopes),
             'state': self.state,
             'code_challenge': self.code_challenge,
-            'code_challenge_method': 'S256'
+            'code_challenge_method': 'plain'
         }
         
         authorization_url = f"{self.AUTHORIZE_URL}?{urlencode(params)}"
