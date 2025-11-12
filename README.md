@@ -57,7 +57,9 @@ twitter_auto_poster/
 
 ## 🚀 快速开始
 
-### 方式 1: 一键设置（推荐新用户）
+### 本地环境
+
+#### 方式 1: 一键设置（推荐新用户）
 
 ```bash
 # 1. 克隆项目
@@ -75,6 +77,34 @@ python tools/complete_setup.py
 - ✅ 配置 Twitter OAuth 2.0 凭据 (Client ID & Secret)
 - ✅ 浏览器授权获取 Access Token
 - ✅ 验证配置是否正确
+
+### 远程服务器（SSH 连接）
+
+如果您通过 SSH 连接到远程 Linux 服务器：
+
+```bash
+# 1. 在服务器上克隆项目
+git clone https://github.com/qiqi-feeder/twitter_bot.git
+cd twitter_bot
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 配置 Client ID 和 Secret
+vim config/config.yaml
+
+# 4. 运行远程授权工具
+python tools/oauth2_authorize_remote.py
+```
+
+**授权流程**:
+1. 工具生成授权 URL
+2. 复制 URL 到本地浏览器
+3. 在浏览器完成授权
+4. 从浏览器地址栏复制授权码
+5. 粘贴到服务器终端
+
+详细步骤请参考：[远程服务器设置指南](docs/REMOTE_SERVER_SETUP.md)
 
 ### 方式 2: 分步设置
 
