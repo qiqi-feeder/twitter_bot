@@ -93,13 +93,28 @@ cp config/config.yaml config/config.yaml.local
 编辑 `config/config.yaml`，填入以下信息：
 
 #### Twitter API 配置
+
+**推荐方式：OAuth 2.0（自动刷新 Token）**
+
 1. 访问 [Twitter Developer Portal](https://developer.twitter.com/)
-2. 创建应用并获取以下凭据：
-   - Bearer Token
-   - Consumer Key (API Key)
-   - Consumer Secret (API Secret)
-   - Access Token
-   - Access Token Secret
+2. 创建应用并启用 OAuth 2.0
+3. 获取 Client ID 和 Client Secret
+4. 配置回调 URL: `http://localhost:8080/callback`
+5. 使用授权工具获取 Token：
+   ```bash
+   python tools/oauth2_authorize.py
+   ```
+
+详细步骤请参考：[OAuth 2.0 认证指南](docs/OAUTH2_GUIDE.md)
+
+**传统方式：OAuth 1.0a**
+
+如果您已有 OAuth 1.0a 凭据，也可以继续使用：
+- Bearer Token
+- Consumer Key (API Key)
+- Consumer Secret (API Secret)
+- Access Token
+- Access Token Secret
 
 #### OpenAI API 配置
 1. 访问 [OpenAI Platform](https://platform.openai.com/)

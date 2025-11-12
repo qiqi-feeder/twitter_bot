@@ -68,7 +68,7 @@ class ProxyManager:
             response = requests.get(
                 test_url,
                 proxies=self.proxies,
-                timeout=10
+                timeout=30  # 增加超时时间
             )
             
             if response.status_code == 200:

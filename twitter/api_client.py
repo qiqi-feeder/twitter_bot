@@ -1,6 +1,6 @@
 """
 Twitter API 客户端模块
-负责与 Twitter API v2 交互，发送推文
+负责与 Twitter API v2 交互，发送推文（支持 OAuth 2.0）
 """
 
 import tweepy
@@ -12,28 +12,26 @@ from utils.logger import logger
 
 
 class TwitterAPIClient:
-    """Twitter API 客户端类"""
-    
+    """Twitter API 客户端类（支持 OAuth 2.0）"""
+
     def __init__(self):
         """初始化 Twitter API 客户端"""
         self.client = None
         self.api = None
+        self.use_oauth2 = False
         self._setup_client()
-    
+
     def _setup_client(self):
-        """设置 Twitter API 客户端"""
+        """设置 Twitter API 客户端（优先使用 OAuth 2.0）"""
         try:
             # 验证凭据
             if not token_manager.validate_credentials():
                 logger.error("Twitter 凭据验证失败，无法初始化客户端")
                 return
-            
-            # 获取认证信息
-            consumer_creds = token_manager.get_consumer_credentials()
+
+            # 获取 OAuth 2.0 访问令牌
             access_token = token_manager.get_access_token()
-            access_token_secret = token_manager.get_access_token_secret()
-            bearer_token = token_manager.get_bearer_token()
-            
+
             # 设置代理（如果启用）
             proxy_url = None
             if proxy_manager.is_proxy_enabled():
@@ -41,30 +39,54 @@ class TwitterAPIClient:
                 if proxies:
                     proxy_url = proxies.get('https')
                     logger.info("为 Twitter 客户端配置代理")
-            
-            # 创建 Tweepy 客户端 (API v2)
-            self.client = tweepy.Client(
-                bearer_token=bearer_token,
-                consumer_key=consumer_creds['consumer_key'],
-                consumer_secret=consumer_creds['consumer_secret'],
-                access_token=access_token,
-                access_token_secret=access_token_secret,
-                wait_on_rate_limit=True
-            )
-            
-            # 创建 API v1.1 客户端（用于某些功能）
-            auth = tweepy.OAuthHandler(
-                consumer_creds['consumer_key'],
-                consumer_creds['consumer_secret']
-            )
-            auth.set_access_token(access_token, access_token_secret)
-            
-            self.api = tweepy.API(auth, wait_on_rate_limit=True)
-            
-            logger.info("Twitter API 客户端初始化成功")
-            
+
+            # 优先使用 OAuth 2.0
+            if access_token and token_manager.get_refresh_token():
+                logger.info("使用 OAuth 2.0 认证方式")
+                self.use_oauth2 = True
+
+                # 创建 Tweepy 客户端 (OAuth 2.0)
+                # 注意：tweepy 的 Client 类支持 bearer_token 参数用于 OAuth 2.0
+                self.client = tweepy.Client(
+                    bearer_token=access_token,
+                    wait_on_rate_limit=True
+                )
+
+                logger.info("Twitter API 客户端初始化成功（OAuth 2.0）")
+
+            else:
+                # 回退到 OAuth 1.0a
+                logger.info("使用 OAuth 1.0a 认证方式")
+                self.use_oauth2 = False
+
+                # 获取 OAuth 1.0a 认证信息
+                from utils.config_loader import config_loader
+                twitter_config = config_loader.get_twitter_config()
+
+                consumer_key = twitter_config.get('consumer_key')
+                consumer_secret = twitter_config.get('consumer_secret')
+                access_token_secret = twitter_config.get('access_token_secret')
+                bearer_token = twitter_config.get('bearer_token')
+
+                # 创建 Tweepy 客户端 (OAuth 1.0a)
+                self.client = tweepy.Client(
+                    bearer_token=bearer_token,
+                    consumer_key=consumer_key,
+                    consumer_secret=consumer_secret,
+                    access_token=access_token,
+                    access_token_secret=access_token_secret,
+                    wait_on_rate_limit=True
+                )
+
+                # 创建 API v1.1 客户端（用于某些功能）
+                auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+                auth.set_access_token(access_token, access_token_secret)
+                self.api = tweepy.API(auth, wait_on_rate_limit=True)
+
+                logger.info("Twitter API 客户端初始化成功（OAuth 1.0a）")
+
         except Exception as e:
-            logger.error(f"初始化 Twitter API 客户端失败: {e}")
+            logger.error(f"初始化 Twitter API 客户端失败: {e}", exc_info=True)
     
     def post_tweet(self, content: str) -> Optional[Dict[str, Any]]:
         """

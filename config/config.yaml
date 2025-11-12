@@ -2,14 +2,32 @@
 
 # Twitter API 配置
 twitter:
+  # ===== OAuth 2.0 配置（推荐使用）=====
+  # Twitter OAuth 2.0 Access Token
+  access_token: "dnpCRnpXeWE4b2lzQk10MDlWSmhBRURkVG9teW9ISWRySV9TMnotaXFMNERmOjE3NjEyOTkxMzQyNjU6MTowOmF0OjE"
+
+  # Twitter OAuth 2.0 Refresh Token
+  refresh_token: "a2ZTZV9PcVk0WXlwNzBwNFZBUkVaS2Y1cWRLd0xxM0NVei1DUF9kSGN4U0kxOjE3NjEyOTkxMzQyNjU6MToxOnJ0OjE"
+
+  # Token 过期时间（ISO 格式，自动更新）
+  token_expires_at: ""
+
+  # Twitter OAuth 2.0 Client ID（如果有的话）
+  client_id: ""
+
+  # Twitter OAuth 2.0 Client Secret（可选）
+  client_secret: ""
+
+  # ===== OAuth 1.0a 配置（旧版，兼容性保留）=====
   # Twitter API v2 Bearer Token
   bearer_token: "your_bearer_token_here"
-  # Twitter API v2 Access Token
-  access_token: "your_access_token_here"
-  # Twitter API v2 Access Token Secret
+
+  # Twitter API v2 Access Token Secret (OAuth 1.0a)
   access_token_secret: "your_access_token_secret_here"
+
   # Twitter API v2 Consumer Key (API Key)
   consumer_key: "your_consumer_key_here"
+
   # Twitter API v2 Consumer Secret (API Secret)
   consumer_secret: "your_consumer_secret_here"
 
@@ -34,7 +52,7 @@ openai:
 proxy:
   # SOCKS5 代理地址，格式：socks5://user:pass@ip:port
   # 如果不需要认证，格式：socks5://ip:port
-  socks5_url: "socks5://username:password@127.0.0.1:1080"
+  socks5_url: "socks5://032bd1fc:59138690@us468.kookeey.info:20146"
   # 是否启用代理
   enabled: true
 

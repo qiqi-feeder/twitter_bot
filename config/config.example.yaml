@@ -3,21 +3,37 @@
 
 # Twitter API 配置
 twitter:
-  # Twitter API v2 Bearer Token
+  # ===== OAuth 2.0 配置（推荐使用）=====
+  # Twitter OAuth 2.0 Access Token
+  # 通过 OAuth 2.0 授权流程获取
+  access_token: "your_oauth2_access_token_here"
+
+  # Twitter OAuth 2.0 Refresh Token
+  # 用于自动刷新 access_token
+  refresh_token: "your_oauth2_refresh_token_here"
+
+  # Token 过期时间（ISO 格式，自动生成）
+  token_expires_at: ""
+
+  # Twitter OAuth 2.0 Client ID
   # 获取方式：https://developer.twitter.com/en/portal/dashboard
-  bearer_token: "AAAAAAAAAAAAAAAAAAAAAA%2FAAAAAAAAAA%3DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  
-  # Twitter API v2 Access Token
-  access_token: "1234567890123456789-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  
-  # Twitter API v2 Access Token Secret
-  access_token_secret: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  
+  client_id: "your_client_id_here"
+
+  # Twitter OAuth 2.0 Client Secret（可选，用于机密客户端）
+  client_secret: "your_client_secret_here"
+
+  # ===== OAuth 1.0a 配置（旧版，兼容性保留）=====
+  # Twitter API v2 Bearer Token
+  bearer_token: "your_bearer_token_here"
+
+  # Twitter API v2 Access Token Secret (OAuth 1.0a)
+  access_token_secret: "your_access_token_secret_here"
+
   # Twitter API v2 Consumer Key (API Key)
-  consumer_key: "AAAAAAAAAAAAAAAAAAAAAAAAA"
-  
+  consumer_key: "your_consumer_key_here"
+
   # Twitter API v2 Consumer Secret (API Secret)
-  consumer_secret: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  consumer_secret: "your_consumer_secret_here"
 
 # OpenAI API 配置
 openai:
