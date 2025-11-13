@@ -45,10 +45,19 @@ class TwitterAPIClient:
                 logger.info("使用 OAuth 2.0 认证方式")
                 self.use_oauth2 = True
 
+                # 获取 client_id 和 client_secret（OAuth 2.0 需要）
+                from utils.config_loader import config_loader
+                twitter_config = config_loader.get_twitter_config()
+                client_id = twitter_config.get('client_id')
+                client_secret = twitter_config.get('client_secret')
+
                 # 创建 Tweepy 客户端 (OAuth 2.0)
-                # 注意：tweepy 的 Client 类支持 bearer_token 参数用于 OAuth 2.0
+                # 注意：tweepy 的 Client 在使用 OAuth 2.0 User Context 时需要 consumer_key 和 consumer_secret
+                # 这里我们使用 client_id 作为 consumer_key，client_secret 作为 consumer_secret
                 self.client = tweepy.Client(
                     bearer_token=access_token,
+                    consumer_key=client_id,
+                    consumer_secret=client_secret,
                     wait_on_rate_limit=True
                 )
 
