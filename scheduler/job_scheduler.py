@@ -13,8 +13,6 @@ from apscheduler.triggers.cron import CronTrigger
 from pytz import timezone as pytz_timezone
 from utils.config_loader import config_loader
 from utils.logger import logger
-from llm.llm_client import llm_client
-from twitter.api_client import twitter_client
 
 
 class JobScheduler:
@@ -90,6 +88,8 @@ class JobScheduler:
                 tweet_content = fixed_content
                 logger.info("使用固定推文内容")
             else:
+                # 延迟导入 LLM 客户端
+                from llm.llm_client import llm_client
                 # 生成推文内容
                 tweet_content = llm_client.generate_tweet()
                 if not tweet_content:
@@ -97,6 +97,8 @@ class JobScheduler:
                     return
                 logger.info("使用 LLM 生成的推文内容")
 
+            # 延迟导入 Twitter 客户端
+            from twitter.api_client import twitter_client
             # 发送推文
             result = twitter_client.post_tweet(tweet_content)
             if result and result.get('success'):
@@ -200,12 +202,14 @@ class JobScheduler:
         """
         try:
             logger.info("开始手动发推")
-            
+
             # 获取推文内容
             if custom_content:
                 tweet_content = custom_content
                 logger.info("使用自定义推文内容")
             else:
+                # 延迟导入 LLM 客户端
+                from llm.llm_client import llm_client
                 tweet_content = llm_client.generate_tweet()
                 if not tweet_content:
                     return {
@@ -213,10 +217,12 @@ class JobScheduler:
                         'error': '生成推文内容失败'
                     }
                 logger.info("使用自动生成的推文内容")
-            
+
+            # 延迟导入 Twitter 客户端
+            from twitter.api_client import twitter_client
             # 发送推文
             result = twitter_client.post_tweet(tweet_content)
-            
+
             if result and result.get('success'):
                 logger.info(f"手动发推成功: {result.get('url')}")
                 return {
