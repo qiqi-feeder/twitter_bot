@@ -121,17 +121,34 @@ class TwitterAPIClient:
                 logger.error("推文发送失败，API 返回空数据")
                 return None
                 
-        except tweepy.TooManyRequests:
-            logger.error("Twitter API 速率限制，请稍后重试")
+        except tweepy.TooManyRequests as e:
+            logger.error(f"Twitter API 速率限制，请稍后重试: {e}")
             return None
-        except tweepy.Unauthorized:
-            logger.error("Twitter API 认证失败，请检查凭据")
+        except tweepy.Unauthorized as e:
+            logger.error(f"Twitter API 认证失败: {e}")
+            logger.error("可能原因: access_token 已过期或无效")
+            logger.error("解决方法: 运行 python tools/oauth2_authorize_remote.py 重新授权")
             return None
-        except tweepy.Forbidden:
-            logger.error("Twitter API 权限不足")
+        except tweepy.Forbidden as e:
+            logger.error(f"Twitter API 权限不足: {e}")
+            logger.error("详细错误信息:")
+            if hasattr(e, 'response') and e.response:
+                logger.error(f"  HTTP 状态码: {e.response.status_code}")
+                logger.error(f"  响应内容: {e.response.text}")
+            logger.error("可能原因:")
+            logger.error("  1. App 权限设置不正确（需要 Read and Write 权限）")
+            logger.error("  2. OAuth 2.0 Scopes 不足（需要 tweet.read 和 tweet.write）")
+            logger.error("  3. access_token 权限不足")
+            logger.error("解决方法:")
+            logger.error("  1. 检查 Twitter Developer Portal 中的 App Permissions")
+            logger.error("  2. 确保授权时包含了 tweet.write scope")
+            logger.error("  3. 重新运行授权: python tools/oauth2_authorize_remote.py")
             return None
         except Exception as e:
             logger.error(f"发送推文时发生错误: {e}")
+            logger.error(f"错误类型: {type(e).__name__}")
+            import traceback
+            logger.error(f"错误堆栈: {traceback.format_exc()}")
             return None
     
     def get_user_info(self) -> Optional[Dict[str, Any]]:
