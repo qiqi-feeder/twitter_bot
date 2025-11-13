@@ -98,9 +98,11 @@ class TwitterAPIClient:
         try:
             logger.info(f"开始发送推文，内容长度: {len(content)} 字符")
             logger.debug(f"推文内容: {content}")
-            
+
             # 使用 Twitter API v2 发送推文
-            response = self.client.create_tweet(text=content)
+            # 注意：使用 OAuth 2.0 时必须设置 user_auth=False
+            # 默认 user_auth=True 会尝试使用 OAuth 1.0a 认证
+            response = self.client.create_tweet(text=content, user_auth=False)
             
             if response.data:
                 tweet_id = response.data['id']
