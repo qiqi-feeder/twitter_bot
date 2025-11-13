@@ -55,35 +55,10 @@ class TwitterAPIClient:
                 logger.info("Twitter API 客户端初始化成功（OAuth 2.0）")
 
             else:
-                # 回退到 OAuth 1.0a
-                logger.info("使用 OAuth 1.0a 认证方式")
-                self.use_oauth2 = False
-
-                # 获取 OAuth 1.0a 认证信息
-                from utils.config_loader import config_loader
-                twitter_config = config_loader.get_twitter_config()
-
-                consumer_key = twitter_config.get('consumer_key')
-                consumer_secret = twitter_config.get('consumer_secret')
-                access_token_secret = twitter_config.get('access_token_secret')
-                bearer_token = twitter_config.get('bearer_token')
-
-                # 创建 Tweepy 客户端 (OAuth 1.0a)
-                self.client = tweepy.Client(
-                    bearer_token=bearer_token,
-                    consumer_key=consumer_key,
-                    consumer_secret=consumer_secret,
-                    access_token=access_token,
-                    access_token_secret=access_token_secret,
-                    wait_on_rate_limit=True
-                )
-
-                # 创建 API v1.1 客户端（用于某些功能）
-                auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-                auth.set_access_token(access_token, access_token_secret)
-                self.api = tweepy.API(auth, wait_on_rate_limit=True)
-
-                logger.info("Twitter API 客户端初始化成功（OAuth 1.0a）")
+                # OAuth 2.0 凭据不完整，无法初始化客户端
+                logger.error("OAuth 2.0 凭据不完整（缺少 access_token 或 refresh_token）")
+                logger.error("请运行授权工具获取 Token: python tools/oauth2_authorize_remote.py")
+                return
 
         except Exception as e:
             logger.error(f"初始化 Twitter API 客户端失败: {e}", exc_info=True)
