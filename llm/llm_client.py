@@ -37,8 +37,16 @@ class LLMClient:
                 proxy_url = proxies.get('https://') or proxies.get('http://')
                 if proxy_url:
                     # httpx.Client 使用 proxy 参数（单数），不是 proxies
-                    http_client = httpx.Client(proxy=proxy_url)
+                    # 增加超时时间，特别是使用代理时
+                    http_client = httpx.Client(
+                        proxy=proxy_url,
+                        timeout=120.0  # 120 秒超时
+                    )
                     logger.info(f"已为 OpenAI 客户端配置代理: {proxy_url}")
+
+        # 如果没有代理，也创建一个带超时的 http_client
+        if http_client is None:
+            http_client = httpx.Client(timeout=60.0)  # 60 秒超时
 
         # 创建 OpenAI 客户端（v1.x API）
         self.client = OpenAI(

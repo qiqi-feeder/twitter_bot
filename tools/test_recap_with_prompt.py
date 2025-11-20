@@ -194,17 +194,18 @@ def generate_recap_with_llm(system_prompt, user_prompt):
     logger.info("\n" + "=" * 60)
     logger.info("步骤 2/3: 使用 LLM 生成复盘内容")
     logger.info("=" * 60)
-    
+
     try:
         from llm.llm_client import llm_client
-        
+
         if not llm_client.client:
             logger.error("❌ LLM 客户端未初始化")
             return None
-        
+
         logger.info("调用 LLM API...")
         logger.info(f"模型: {llm_client.openai_config.get('model', 'gpt-4')}")
-        
+        logger.info("提示: 如果使用代理，首次调用可能需要较长时间...")
+
         response = llm_client.client.chat.completions.create(
             model=llm_client.openai_config.get('model', 'gpt-4'),
             messages=[
@@ -218,16 +219,21 @@ def generate_recap_with_llm(system_prompt, user_prompt):
                 }
             ],
             max_tokens=2000,
-            temperature=0.7
+            temperature=0.7,
+            timeout=120.0  # 增加超时时间到 120 秒
         )
-        
+
         content = response.choices[0].message.content.strip()
         logger.info("✅ LLM 生成成功")
-        
+
         return content
-    
+
     except Exception as e:
         logger.error(f"❌ LLM 生成失败: {e}")
+        logger.error("可能的原因:")
+        logger.error("1. 代理连接超时 - 请检查代理配置")
+        logger.error("2. OpenAI API Key 无效 - 请检查 config.yaml")
+        logger.error("3. 网络连接问题 - 请检查网络")
         import traceback
         traceback.print_exc()
         return None
