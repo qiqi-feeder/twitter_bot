@@ -91,6 +91,14 @@ scheduler:
   fixed_content: "Good morning! 🌅 Have a great day! #DailyGreeting"
   # fixed_content: null  # 使用 LLM 生成内容
 
+  # 每日大盘复盘配置
+  daily_recap:
+    # 是否启用每日大盘复盘
+    enabled: true
+
+    # 复盘时间（24小时制，基于设置的时区）
+    recap_time: "20:00"  # 晚上8点
+
 # Flask 应用配置
 flask:
   # 服务器主机（0.0.0.0 表示接受所有IP访问）

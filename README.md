@@ -6,8 +6,11 @@
 
 - 🤖 **智能推文生成**: 使用 OpenAI GPT 模型生成有趣且有价值的推文内容
 - ⏰ **定时自动发推**: 支持每天多次定时发推，时间可配置
+- 📊 **Web3 每日大盘复盘**: 自动获取真实市场数据，生成专业复盘 Thread
 - 🌐 **代理支持**: 所有 API 请求支持 SOCKS5 代理
-- 🔧 **手动触发**: 提供 Web API 接口支持手动发推
+- 🔧 **手动触发**: 提供 Web API 接口支持手动发推和复盘
+- 📈 **实时数据**: 从 Binance、CoinGecko、L2BEAT 等获取真实市场数据
+- 🧵 **Thread 支持**: 自动拆分和发布 Twitter Thread
 - 📊 **状态监控**: 实时监控系统各组件状态
 - 📝 **日志记录**: 详细的日志记录，支持文件和控制台输出
 - ⚙️ **配置化管理**: 所有配置项统一管理，易于维护
@@ -38,6 +41,21 @@ twitter_auto_poster/
 ├── scheduler/
 │   ├── job_scheduler.py         # 定时任务调度模块
 │   └── __init__.py
+│
+├── data_sources/                # 数据源模块（新增）
+│   ├── fetch_real_data.py       # 获取真实市场数据
+│   └── __init__.py
+│
+├── recap/                       # 大盘复盘模块（新增）
+│   ├── generate_summary.py      # 生成复盘内容
+│   ├── post_thread.py           # 发布 Thread
+│   └── __init__.py
+│
+├── templates/                   # 模板文件（新增）
+│   └── recap_template.md        # 复盘模板
+│
+├── data/                        # 数据文件（新增）
+│   └── market.json              # 市场数据缓存
 │
 ├── utils/
 │   ├── proxy.py                 # socks5代理管理
@@ -231,12 +249,40 @@ Content-Type: application/json
 }
 ```
 
-### 4. 获取用户信息
+### 4. 手动触发大盘复盘（新增）
+```
+POST /recap/manual
+Content-Type: application/json
+```
+
+完整流程：获取市场数据 → 生成复盘 Thread → 发布到 Twitter
+
+### 5. 获取市场数据（新增）
+```
+POST /recap/fetch-data
+Content-Type: application/json
+```
+
+仅获取市场数据并保存到 `data/market.json`
+
+### 6. 生成复盘内容（新增）
+```
+POST /recap/generate
+Content-Type: application/json
+
+{
+    "custom_prompt": "自定义提示词（可选）"
+}
+```
+
+仅生成复盘内容，不发布
+
+### 7. 获取用户信息
 ```
 GET /user/info
 ```
 
-### 5. 获取最近推文
+### 8. 获取最近推文
 ```
 GET /tweets/recent?count=5
 ```
@@ -263,6 +309,11 @@ scheduler:
   # 如果设置，则每次发送固定内容
   # 如果为 null 或删除此行，则使用 LLM 生成
   fixed_content: "Good morning! 🌅 Have a great day! #DailyGreeting"
+
+  # 每日大盘复盘配置（新增）
+  daily_recap:
+    enabled: true           # 是否启用每日大盘复盘
+    recap_time: "20:00"     # 复盘时间（24小时制）
 ```
 
 **重要说明**:

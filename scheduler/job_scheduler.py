@@ -108,7 +108,137 @@ class JobScheduler:
 
         except Exception as e:
             logger.error(f"执行自动发推任务时发生错误: {e}")
-    
+
+    def _daily_recap_job(self):
+        """
+        每日大盘复盘任务
+        1. 获取市场数据
+        2. 生成复盘 Thread
+        3. 发布 Thread
+        """
+        try:
+            current_time = datetime.now(self.timezone).strftime("%Y-%m-%d %H:%M:%S %Z")
+            logger.info(f"开始执行每日大盘复盘任务 (当前时间: {current_time})")
+
+            # 1. 获取市场数据
+            logger.info("步骤 1/3: 获取市场数据...")
+            from data_sources.fetch_real_data import fetch_all_market_data
+            market_data = fetch_all_market_data(save_to_file=True)
+
+            if not market_data:
+                logger.error("获取市场数据失败，跳过本次复盘")
+                return
+
+            logger.info("市场数据获取成功")
+
+            # 2. 生成复盘 Thread
+            logger.info("步骤 2/3: 生成复盘 Thread...")
+            from recap.generate_summary import generate_daily_recap
+            thread = generate_daily_recap()
+
+            if not thread:
+                logger.error("生成复盘 Thread 失败，跳过本次发布")
+                return
+
+            logger.info(f"复盘 Thread 生成成功，共 {len(thread)} 条推文")
+
+            # 3. 发布 Thread
+            logger.info("步骤 3/3: 发布 Thread...")
+            from recap.post_thread import post_daily_recap_thread
+            result = post_daily_recap_thread(thread)
+
+            if result and result.get('success'):
+                logger.info(f"每日大盘复盘发布成功！Thread URL: {result.get('thread_url')}")
+            else:
+                logger.error(f"每日大盘复盘发布失败: {result.get('error')}")
+
+        except Exception as e:
+            logger.error(f"执行每日大盘复盘任务时发生错误: {e}")
+
+    def setup_daily_recap_job(self, recap_time: str = "20:00"):
+        """
+        设置每日大盘复盘任务
+
+        Args:
+            recap_time: 复盘时间 (HH:MM 格式)，默认 20:00
+        """
+        try:
+            hour, minute = map(int, recap_time.split(':'))
+
+            trigger = CronTrigger(
+                hour=hour,
+                minute=minute,
+                timezone=self.timezone
+            )
+
+            self.scheduler.add_job(
+                func=self._daily_recap_job,
+                trigger=trigger,
+                id='daily_recap',
+                name=f'每天 {recap_time} 大盘复盘',
+                replace_existing=True
+            )
+
+            logger.info(f"已设置每日大盘复盘任务: 每天 {recap_time} ({self.timezone})")
+
+        except Exception as e:
+            logger.error(f"设置每日大盘复盘任务失败: {e}")
+
+    def manual_daily_recap(self) -> dict:
+        """
+        手动触发每日大盘复盘
+
+        Returns:
+            执行结果字典
+        """
+        try:
+            logger.info("手动触发每日大盘复盘...")
+
+            # 1. 获取市场数据
+            from data_sources.fetch_real_data import fetch_all_market_data
+            market_data = fetch_all_market_data(save_to_file=True)
+
+            if not market_data:
+                return {
+                    'success': False,
+                    'error': '获取市场数据失败'
+                }
+
+            # 2. 生成复盘 Thread
+            from recap.generate_summary import generate_daily_recap
+            thread = generate_daily_recap()
+
+            if not thread:
+                return {
+                    'success': False,
+                    'error': '生成复盘 Thread 失败'
+                }
+
+            # 3. 发布 Thread
+            from recap.post_thread import post_daily_recap_thread
+            result = post_daily_recap_thread(thread)
+
+            if result and result.get('success'):
+                logger.info(f"手动大盘复盘发布成功: {result.get('thread_url')}")
+                return {
+                    'success': True,
+                    'thread_url': result.get('thread_url'),
+                    'tweet_count': result.get('tweet_count'),
+                    'tweets': result.get('tweets')
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', '发布失败')
+                }
+
+        except Exception as e:
+            logger.error(f"手动大盘复盘失败: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     def start(self):
         """启动调度器"""
         if self.is_running:

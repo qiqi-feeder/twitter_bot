@@ -221,6 +221,108 @@ def recent_tweets():
         }), 500
 
 
+@app.route('/recap/manual', methods=['POST'])
+def manual_recap():
+    """手动触发每日大盘复盘"""
+    try:
+        logger.info("收到手动触发大盘复盘请求")
+
+        # 执行大盘复盘
+        result = job_scheduler.manual_daily_recap()
+
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'message': '大盘复盘发布成功',
+                'data': {
+                    'thread_url': result.get('thread_url'),
+                    'tweet_count': result.get('tweet_count'),
+                    'tweets': result.get('tweets')
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '大盘复盘发布失败',
+                'error': result.get('error')
+            }), 400
+
+    except Exception as e:
+        logger.error(f"手动触发大盘复盘失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': '触发大盘复盘时发生错误',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/recap/fetch-data', methods=['POST'])
+def fetch_market_data():
+    """手动获取市场数据"""
+    try:
+        logger.info("收到手动获取市场数据请求")
+
+        from data_sources.fetch_real_data import fetch_all_market_data
+        data = fetch_all_market_data(save_to_file=True)
+
+        if data:
+            return jsonify({
+                'success': True,
+                'message': '市场数据获取成功',
+                'data': data
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '市场数据获取失败'
+            }), 400
+
+    except Exception as e:
+        logger.error(f"获取市场数据失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': '获取市场数据时发生错误',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/recap/generate', methods=['POST'])
+def generate_recap():
+    """生成复盘内容（不发布）"""
+    try:
+        logger.info("收到生成复盘内容请求")
+
+        # 获取自定义提示词
+        data = request.get_json() or {}
+        custom_prompt = data.get('custom_prompt')
+
+        from recap.generate_summary import generate_daily_recap
+        thread = generate_daily_recap(custom_prompt)
+
+        if thread:
+            return jsonify({
+                'success': True,
+                'message': '复盘内容生成成功',
+                'data': {
+                    'tweet_count': len(thread),
+                    'tweets': thread
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': '复盘内容生成失败'
+            }), 400
+
+    except Exception as e:
+        logger.error(f"生成复盘内容失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': '生成复盘内容时发生错误',
+            'error': str(e)
+        }), 500
+
+
 def signal_handler(signum, frame):
     """信号处理器，用于优雅关闭"""
     logger.info("接收到关闭信号，正在关闭系统...")
@@ -256,9 +358,20 @@ def initialize_system():
         logger.error("OpenAI API Key 验证失败，请检查配置")
         return False
     
+    # 设置每日大盘复盘任务（如果启用）
+    scheduler_config = config_loader.get_scheduler_config()
+    daily_recap_config = scheduler_config.get('daily_recap', {})
+
+    if daily_recap_config.get('enabled', False):
+        recap_time = daily_recap_config.get('recap_time', '20:00')
+        job_scheduler.setup_daily_recap_job(recap_time)
+        logger.info(f"每日大盘复盘已启用，时间: {recap_time}")
+    else:
+        logger.info("每日大盘复盘未启用")
+
     # 启动调度器
     job_scheduler.start()
-    
+
     logger.info("系统初始化完成")
     return True
 
