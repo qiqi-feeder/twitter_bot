@@ -68,66 +68,124 @@ def fetch_market_data():
 
 def build_user_prompt(market_data):
     """构建用户提示词（将市场数据作为用户输入）"""
-    
+
     # 格式化市场数据为易读的文本
     user_prompt = f"""请根据以下市场数据生成今日 Web3 大盘复盘 Twitter Thread：
 
-## 市场数据 (Data Timestamp: {market_data.get('timestamp')})
+## 市场数据 (Data Timestamp: {market_data.get('timestamp', 'N/A')})
 
 ### 价格数据
 """
-    
+
     if 'price' in market_data:
         btc = market_data['price'].get('btc', {})
         eth = market_data['price'].get('eth', {})
-        user_prompt += f"""
-- BTC 价格: ${btc.get('price')}
-- BTC 24h 涨跌: {btc.get('change'):+.2f}%
-- BTC 24h 交易量: ${btc.get('volume'):,.0f}
 
-- ETH 价格: ${eth.get('price')}
-- ETH 24h 涨跌: {eth.get('change'):+.2f}%
-- ETH 24h 交易量: ${eth.get('volume'):,.0f}
-"""
-    
+        btc_price = btc.get('price')
+        btc_change = btc.get('change')
+        btc_volume = btc.get('volume')
+        eth_price = eth.get('price')
+        eth_change = eth.get('change')
+        eth_volume = eth.get('volume')
+
+        if btc_price is not None:
+            user_prompt += f"\n- BTC 价格: ${btc_price:,.2f}"
+        if btc_change is not None:
+            user_prompt += f"\n- BTC 24h 涨跌: {btc_change:+.2f}%"
+        if btc_volume is not None:
+            user_prompt += f"\n- BTC 24h 交易量: ${btc_volume:,.0f}"
+
+        user_prompt += "\n"
+
+        if eth_price is not None:
+            user_prompt += f"\n- ETH 价格: ${eth_price:,.2f}"
+        if eth_change is not None:
+            user_prompt += f"\n- ETH 24h 涨跌: {eth_change:+.2f}%"
+        if eth_volume is not None:
+            user_prompt += f"\n- ETH 24h 交易量: ${eth_volume:,.0f}"
+
     if 'global' in market_data:
         global_data = market_data['global']
-        user_prompt += f"""
-### 全球市场数据
-- 总市值: ${global_data.get('market_cap'):,.0f}
-- 24h 市值变化: {global_data.get('change'):+.2f}%
-- BTC 市值占比: {global_data.get('btc_dominance'):.2f}%
-"""
-    
+        market_cap = global_data.get('market_cap')
+        change = global_data.get('change')
+        btc_dominance = global_data.get('btc_dominance')
+
+        user_prompt += "\n\n### 全球市场数据"
+        if market_cap is not None:
+            user_prompt += f"\n- 总市值: ${market_cap:,.0f}"
+        if change is not None:
+            user_prompt += f"\n- 24h 市值变化: {change:+.2f}%"
+        if btc_dominance is not None:
+            user_prompt += f"\n- BTC 市值占比: {btc_dominance:.2f}%"
+
     if 'fear_greed' in market_data:
         fg = market_data['fear_greed']
-        user_prompt += f"""
-### 市场情绪
-- 恐惧贪婪指数: {fg.get('value')} ({fg.get('classification')})
-"""
-    
+        value = fg.get('value')
+        classification = fg.get('classification')
+
+        if value is not None and classification:
+            user_prompt += f"\n\n### 市场情绪"
+            user_prompt += f"\n- 恐惧贪婪指数: {value} ({classification})"
+
     if 'liquidation' in market_data:
         liq = market_data['liquidation']
-        user_prompt += f"""
-### 爆仓数据
-- 24h 总爆仓: ${liq.get('total_24h'):,.0f}
-- 多头爆仓: ${liq.get('long_24h'):,.0f}
-- 空头爆仓: ${liq.get('short_24h'):,.0f}
-"""
-    
-    if 'l2' in market_data:
+        total_24h = liq.get('total_24h')
+        long_24h = liq.get('long_24h')
+        short_24h = liq.get('short_24h')
+        long_short_ratio = liq.get('long_short_ratio')
+
+        # 只有在有实际数据时才添加爆仓板块
+        if total_24h or long_24h or short_24h or long_short_ratio:
+            user_prompt += "\n\n### 爆仓数据"
+            if total_24h:
+                user_prompt += f"\n- 24h 总爆仓: ${total_24h:,.0f}"
+            if long_24h:
+                user_prompt += f"\n- 多头爆仓: ${long_24h:,.0f}"
+            if short_24h:
+                user_prompt += f"\n- 空头爆仓: ${short_24h:,.0f}"
+            if long_short_ratio:
+                user_prompt += f"\n- 多空比: {long_short_ratio}"
+
+    if 'l2' in market_data and market_data['l2']:
         l2 = market_data['l2']
-        user_prompt += f"""
-### Layer 2 生态
-- L2 总锁仓量 (TVL): ${l2.get('total_tvl'):,.0f}
-- 24h TVL 变化: {l2.get('tvl_change'):+.2f}%
-"""
-    
+        total_tvl = l2.get('total_tvl')
+        tvl_change = l2.get('tvl_change')
+
+        if total_tvl or tvl_change:
+            user_prompt += "\n\n### Layer 2 生态"
+            if total_tvl:
+                user_prompt += f"\n- L2 总锁仓量 (TVL): ${total_tvl:,.0f}"
+            if tvl_change is not None:
+                user_prompt += f"\n- 24h TVL 变化: {tvl_change:+.2f}%"
+
+    if 'macro' in market_data:
+        macro = market_data['macro']
+        # 只有在有实际数据时才添加宏观板块（非 0 值）
+        has_macro_data = any(
+            macro.get(key) and macro.get(key) != 0
+            for key in ['nasdaq', 'dxy', 'vix', 'us10y', 'gold', 'oil']
+        )
+
+        if has_macro_data:
+            user_prompt += "\n\n### 宏观市场"
+            if macro.get('nasdaq'):
+                user_prompt += f"\n- 纳斯达克: {macro['nasdaq']:+.2f}%"
+            if macro.get('dxy'):
+                user_prompt += f"\n- 美元指数 (DXY): {macro['dxy']:.2f}"
+            if macro.get('vix'):
+                user_prompt += f"\n- VIX 恐慌指数: {macro['vix']:.2f}"
+            if macro.get('us10y'):
+                user_prompt += f"\n- 10年美债收益率: {macro['us10y']:.2f}%"
+            if macro.get('gold'):
+                user_prompt += f"\n- 黄金: {macro['gold']:+.2f}%"
+            if macro.get('oil'):
+                user_prompt += f"\n- 原油: {macro['oil']:+.2f}%"
+
     user_prompt += """
 
 请生成一个包含 4-5 条推文的 Twitter Thread，每条推文不超过 280 字符。
 """
-    
+
     return user_prompt
 
 
