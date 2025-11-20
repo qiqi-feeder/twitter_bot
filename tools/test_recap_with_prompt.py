@@ -239,53 +239,58 @@ def generate_recap_with_llm(system_prompt, user_prompt):
         return None
 
 
-def split_into_thread(content):
-    """将生成的内容拆分为 Twitter Thread"""
-    # 按空行或特定标记拆分
-    tweets = []
-    
-    # 尝试按 "---" 或空行拆分
-    parts = content.split('\n---\n')
-    if len(parts) == 1:
-        parts = content.split('\n\n')
-    
-    for part in parts:
-        part = part.strip()
-        if part and len(part) > 10:  # 忽略太短的片段
-            # 如果单条推文超过 280 字符，需要进一步拆分
-            if len(part) <= 280:
-                tweets.append(part)
-            else:
-                # 简单拆分：按句子
-                sentences = part.split('. ')
-                current_tweet = ""
-                for sentence in sentences:
-                    if len(current_tweet) + len(sentence) + 2 <= 280:
-                        current_tweet += sentence + ". "
-                    else:
-                        if current_tweet:
-                            tweets.append(current_tweet.strip())
-                        current_tweet = sentence + ". "
-                if current_tweet:
-                    tweets.append(current_tweet.strip())
-    
-    return tweets
+def save_recap_to_file(content, market_data):
+    """保存复盘内容到文件"""
+    import json
+    from datetime import datetime
+
+    # 创建保存目录
+    recap_dir = 'data/recaps'
+    os.makedirs(recap_dir, exist_ok=True)
+
+    # 生成文件名（使用日期）
+    date_str = datetime.now().strftime('%Y-%m-%d')
+
+    # 保存为 JSON 格式
+    json_file = os.path.join(recap_dir, f'recap_{date_str}.json')
+    with open(json_file, 'w', encoding='utf-8') as f:
+        json.dump({
+            'date': date_str,
+            'timestamp': market_data.get('timestamp'),
+            'content': content,
+            'market_data': market_data
+        }, f, ensure_ascii=False, indent=2)
+
+    # 保存为纯文本格式（方便阅读）
+    txt_file = os.path.join(recap_dir, f'recap_{date_str}.txt')
+    with open(txt_file, 'w', encoding='utf-8') as f:
+        f.write(f"# Web3 每日大盘复盘 - {date_str}\n\n")
+        f.write(content)
+        f.write(f"\n\n---\n生成时间: {market_data.get('timestamp')}\n")
+
+    # 同时保存到 data/recap_output.json（兼容旧版）
+    output_file = 'data/recap_output.json'
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump({
+            'date': date_str,
+            'timestamp': market_data.get('timestamp'),
+            'content': content,
+            'market_data': market_data
+        }, f, ensure_ascii=False, indent=2)
+
+    return json_file, txt_file
 
 
-def display_thread(thread):
-    """显示生成的 Thread"""
+def display_recap(content):
+    """显示生成的复盘内容"""
     logger.info("\n" + "=" * 60)
-    logger.info("步骤 3/3: 生成的复盘 Thread")
+    logger.info("步骤 3/3: 生成的复盘内容")
     logger.info("=" * 60)
-    
-    logger.info(f"\n共生成 {len(thread)} 条推文:\n")
-    
-    for i, tweet in enumerate(thread, 1):
-        logger.info(f"{'='*60}")
-        logger.info(f"Tweet {i}/{len(thread)} (长度: {len(tweet)} 字符)")
-        logger.info(f"{'='*60}")
-        logger.info(tweet)
-        logger.info("")
+
+    logger.info(f"\n内容长度: {len(content)} 字符\n")
+    logger.info("=" * 60)
+    logger.info(content)
+    logger.info("=" * 60)
 
 
 def main():
@@ -313,30 +318,25 @@ def main():
         if not content:
             logger.error("无法生成复盘内容，退出")
             sys.exit(1)
-        
-        # 5. 拆分为 Thread
-        thread = split_into_thread(content)
-        
-        # 6. 显示结果
-        display_thread(thread)
-        
-        # 7. 保存结果
-        output_file = 'data/recap_output.json'
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump({
-                'timestamp': market_data.get('timestamp'),
-                'thread': thread,
-                'market_data': market_data
-            }, f, ensure_ascii=False, indent=2)
-        
-        logger.info(f"\n✅ 复盘内容已保存到: {output_file}")
+
+        # 5. 显示结果
+        display_recap(content)
+
+        # 6. 保存结果
+        json_file, txt_file = save_recap_to_file(content, market_data)
+
+        logger.info(f"\n✅ 复盘内容已保存到:")
+        logger.info(f"   - JSON 格式: {json_file}")
+        logger.info(f"   - 文本格式: {txt_file}")
+        logger.info(f"   - 兼容格式: data/recap_output.json")
         logger.info("\n" + "=" * 60)
         logger.info("✅ 测试完成！")
         logger.info("=" * 60)
         logger.info("\n提示：")
         logger.info("1. 如需发布到 Twitter，请使用: POST /recap/manual")
         logger.info("2. 如需修改系统提示词，请编辑: prompt/system_prompt.md")
-        logger.info("3. 生成的内容已保存到: data/recap_output.json")
+        logger.info(f"3. 查看历史复盘: data/recaps/ 目录")
+        logger.info(f"4. 查看今日复盘文本: {txt_file}")
     
     except Exception as e:
         logger.error(f"❌ 测试失败: {e}")

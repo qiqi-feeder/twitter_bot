@@ -131,6 +131,17 @@ dmypy.json
 # 项目特定文件
 logs/*.log
 config/config.yaml.local
+config/config.local.yaml
 *.local
 .DS_Store
 Thumbs.db
+
+# 数据文件（包含敏感信息）
+data/market.json
+data/recap_output.json
+data/recaps/*.json
+data/recaps/*.txt
+
+# IDE 文件
+.idea/
+.vscode/

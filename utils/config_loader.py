@@ -23,24 +23,55 @@ class ConfigLoader:
     
     def load_config(self) -> Dict[str, Any]:
         """
-        加载配置文件
-        
+        加载配置文件，支持本地配置覆盖
+
+        加载顺序:
+        1. 加载 config/config.yaml (主配置)
+        2. 如果存在 config/config.local.yaml，用它覆盖主配置
+
         Returns:
             配置字典
-            
+
         Raises:
             FileNotFoundError: 配置文件不存在
             yaml.YAMLError: YAML 格式错误
         """
         if not os.path.exists(self.config_path):
             raise FileNotFoundError(f"配置文件不存在: {self.config_path}")
-        
+
         try:
+            # 加载主配置文件
             with open(self.config_path, 'r', encoding='utf-8') as file:
                 self._config = yaml.safe_load(file)
-                return self._config
+
+            # 尝试加载本地配置文件（如果存在）
+            local_config_path = self.config_path.replace('.yaml', '.local.yaml')
+            if os.path.exists(local_config_path):
+                with open(local_config_path, 'r', encoding='utf-8') as file:
+                    local_config = yaml.safe_load(file)
+                    # 深度合并配置
+                    self._merge_config(self._config, local_config)
+                    print(f"✅ 已加载本地配置: {local_config_path}")
+
+            return self._config
         except yaml.YAMLError as e:
             raise yaml.YAMLError(f"配置文件格式错误: {e}")
+
+    def _merge_config(self, base: Dict, override: Dict) -> None:
+        """
+        深度合并配置字典
+
+        Args:
+            base: 基础配置（会被修改）
+            override: 覆盖配置
+        """
+        for key, value in override.items():
+            if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                # 递归合并字典
+                self._merge_config(base[key], value)
+            else:
+                # 直接覆盖
+                base[key] = value
     
     def get_config(self) -> Dict[str, Any]:
         """

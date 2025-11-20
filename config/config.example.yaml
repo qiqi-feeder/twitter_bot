@@ -50,8 +50,8 @@ openai:
 
   # 使用的模型
   # OpenAI: "gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"
-  # Grok: "grok-beta", "grok-vision-beta"
-  model: "grok-beta"
+  # Grok: "grok-3", "grok-2-latest", "grok-vision-beta"
+  model: "grok-3"
 
   # Grok API Base URL（通常不需要修改）
   grok_base_url: "https://api.x.ai/v1"

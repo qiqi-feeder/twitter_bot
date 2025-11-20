@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-11-20T19:07:22.546444",
+  "price": {
+    "btc": {
+      "price": 91691.08,
+      "change": 0.23,
+      "volume": 2899823360
+    },
+    "eth": {
+      "price": 3009.7,
+      "change": -2.76,
+      "volume": 2135708112
+    }
+  },
+  "global": {
+    "market_cap": 3211681453942,
+    "change": -0.1,
+    "btc_dominance": 56.98,
+    "eth_dominance": 11.32
+  },
+  "fear_greed": {
+    "value": 11,
+    "classification": "Extreme Fear"
+  },
+  "liquidation": {
+    "24h": 0,
+    "long_short_ratio": "1:1",
+    "note": "Coinglass API requires API key - using placeholder"
+  },
+  "l2": {},
+  "macro": {
+    "nasdaq": 0,
+    "dxy": 0,
+    "vix": 0,
+    "us10y": 0,
+    "gold": 0,
+    "oil": 0,
+    "note": "Macro data requires yfinance or other financial API"
+  }
+}
