@@ -35,14 +35,26 @@ twitter:
   # Twitter API v2 Consumer Secret (API Secret)
   consumer_secret: "your_consumer_secret_here"
 
-# OpenAI API 配置
+# LLM API 配置（支持 OpenAI 和 Grok）
 openai:
-  # OpenAI API Key
+  # 选择 LLM 提供商: "openai" 或 "grok"
+  provider: "grok"
+
+  # OpenAI API Key（如果使用 OpenAI）
   # 获取方式：https://platform.openai.com/api-keys
   api_key: "sk-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-  
+
+  # Grok API Key（如果使用 Grok）
+  # 获取方式：https://console.x.ai/
+  grok_api_key: "xai-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
   # 使用的模型
-  model: "gpt-3.5-turbo"
+  # OpenAI: "gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"
+  # Grok: "grok-beta", "grok-vision-beta"
+  model: "grok-beta"
+
+  # Grok API Base URL（通常不需要修改）
+  grok_base_url: "https://api.x.ai/v1"
   
   # 生成推文的提示词
   prompt_template: |

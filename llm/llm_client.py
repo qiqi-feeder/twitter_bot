@@ -21,11 +21,25 @@ class LLMClient:
         self._setup_openai_client()
 
     def _setup_openai_client(self):
-        """设置 OpenAI 客户端"""
-        api_key = self.openai_config.get('api_key')
-        if not api_key:
-            logger.warning("OpenAI API Key 未配置，LLM 功能将不可用")
-            return
+        """设置 LLM 客户端（支持 OpenAI 和 Grok）"""
+        # 获取 provider 配置，默认为 openai
+        provider = self.openai_config.get('provider', 'openai').lower()
+
+        # 根据 provider 选择 API key 和 base_url
+        if provider == 'grok':
+            api_key = self.openai_config.get('grok_api_key')
+            base_url = self.openai_config.get('grok_base_url', 'https://api.x.ai/v1')
+            if not api_key:
+                logger.warning("Grok API Key 未配置，LLM 功能将不可用")
+                return
+            logger.info(f"使用 Grok API，Base URL: {base_url}")
+        else:
+            api_key = self.openai_config.get('api_key')
+            base_url = None  # OpenAI 使用默认 URL
+            if not api_key:
+                logger.warning("OpenAI API Key 未配置，LLM 功能将不可用")
+                return
+            logger.info("使用 OpenAI API")
 
         # 如果启用了代理，配置代理
         http_client = None
@@ -42,19 +56,26 @@ class LLMClient:
                         proxy=proxy_url,
                         timeout=120.0  # 120 秒超时
                     )
-                    logger.info(f"已为 OpenAI 客户端配置代理: {proxy_url}")
+                    logger.info(f"已为 LLM 客户端配置代理: {proxy_url}")
 
         # 如果没有代理，也创建一个带超时的 http_client
         if http_client is None:
             http_client = httpx.Client(timeout=60.0)  # 60 秒超时
 
-        # 创建 OpenAI 客户端（v1.x API）
-        self.client = OpenAI(
-            api_key=api_key,
-            http_client=http_client
-        )
+        # 创建 OpenAI 兼容客户端（v1.x API）
+        # Grok API 兼容 OpenAI 格式，所以可以使用同一个客户端
+        client_params = {
+            'api_key': api_key,
+            'http_client': http_client
+        }
 
-        logger.info("OpenAI 客户端初始化完成")
+        # 如果是 Grok，添加 base_url
+        if base_url:
+            client_params['base_url'] = base_url
+
+        self.client = OpenAI(**client_params)
+
+        logger.info(f"LLM 客户端初始化完成（Provider: {provider}）")
     
     def generate_tweet(self, custom_prompt: Optional[str] = None) -> Optional[str]:
         """
