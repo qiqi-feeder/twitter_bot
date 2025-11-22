@@ -58,10 +58,24 @@ class TwitterAPIClient:
                     bearer_token=access_token,
                     consumer_key=client_id,
                     consumer_secret=client_secret,
-                    wait_on_rate_limit=True
+                    wait_on_rate_limit=True,
+                    proxy=proxy_url
                 )
 
                 logger.info("Twitter API 客户端初始化成功（OAuth 2.0）")
+
+                # 初始化 v1.1 API 用于上传媒体 (尝试使用 OAuth 2.0 Access Token)
+                # 注意：Twitter API v1.1 的 media/upload 通常需要 OAuth 1.0a User Context
+                # 但某些情况下 OAuth 2.0 Bearer Token 可能可行，或者我们需要提示用户
+                self.api = tweepy.Client(bearer_token=access_token)
+                # 为了兼容性，我们尝试用 OAuth 1.0a 方式初始化 API v1.1
+                # 如果配置了 consumer key/secret，即使没有 access token secret，我们也可以尝试
+                consumer_key = twitter_config.get('consumer_key') or client_id
+                consumer_secret = twitter_config.get('consumer_secret') or client_secret
+                
+                auth = tweepy.OAuth2BearerHandler(access_token)
+                self.api_v1 = tweepy.API(auth, proxy=proxy_url)
+
 
             else:
                 # OAuth 2.0 凭据不完整，无法初始化客户端
@@ -72,12 +86,13 @@ class TwitterAPIClient:
         except Exception as e:
             logger.error(f"初始化 Twitter API 客户端失败: {e}", exc_info=True)
     
-    def post_tweet(self, content: str) -> Optional[Dict[str, Any]]:
+    def post_tweet(self, content: str, media_paths: list = None) -> Optional[Dict[str, Any]]:
         """
         发送推文
         
         Args:
             content: 推文内容
+            media_paths: 图片文件路径列表 (可选)
             
         Returns:
             推文信息字典，失败时返回 None
@@ -99,10 +114,28 @@ class TwitterAPIClient:
             logger.info(f"开始发送推文，内容长度: {len(content)} 字符")
             logger.debug(f"推文内容: {content}")
 
+            # 上传媒体文件 (如果有)
+            media_ids = []
+            if media_paths:
+                logger.info(f"准备上传 {len(media_paths)} 个媒体文件")
+                for path in media_paths:
+                    try:
+                        # 使用 v1.1 API 上传
+                        # 注意：这里假设 self.api_v1 已经正确初始化
+                        # 如果是 OAuth 2.0 Bearer Token，media_upload 可能受限
+                        media = self.api_v1.media_upload(filename=path)
+                        media_ids.append(media.media_id)
+                        logger.info(f"媒体文件上传成功: {path} (ID: {media.media_id})")
+                    except Exception as e:
+                        logger.error(f"媒体文件上传失败 {path}: {e}")
+            
             # 使用 Twitter API v2 发送推文
             # 注意：使用 OAuth 2.0 时必须设置 user_auth=False
             # 默认 user_auth=True 会尝试使用 OAuth 1.0a 认证
-            response = self.client.create_tweet(text=content, user_auth=False)
+            if media_ids:
+                response = self.client.create_tweet(text=content, media_ids=media_ids, user_auth=False)
+            else:
+                response = self.client.create_tweet(text=content, user_auth=False)
             
             if response.data:
                 tweet_id = response.data['id']

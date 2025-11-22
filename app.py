@@ -4,6 +4,7 @@ Twitter 自动发推系统主入口
 """
 
 from flask import Flask, request, jsonify
+from werkzeug.utils import secure_filename
 import signal
 import sys
 import os
@@ -80,12 +81,48 @@ def status():
 def post_tweet():
     """手动发推接口"""
     try:
-        # 获取请求数据
-        data = request.get_json() or {}
-        custom_content = data.get('content')
-        
-        # 执行发推
-        result = job_scheduler.manual_tweet(custom_content)
+        # 检查请求类型
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # 处理文件上传
+            custom_content = request.form.get('content')
+            uploaded_files = request.files.getlist('images')
+            
+            media_files = []
+            if uploaded_files:
+                # 确保临时目录存在
+                import tempfile
+                temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')
+                if not os.path.exists(temp_dir):
+                    os.makedirs(temp_dir)
+                
+                for file in uploaded_files:
+                    if file and file.filename:
+                        # 保存文件
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(temp_dir, filename)
+                        file.save(file_path)
+                        media_files.append(file_path)
+                        logger.info(f"接收到上传文件: {file_path}")
+            
+            # 执行发推
+            result = job_scheduler.manual_tweet(custom_content, media_files=media_files)
+            
+            # 清理临时文件
+            for file_path in media_files:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                        logger.info(f"清理临时文件: {file_path}")
+                except Exception as e:
+                    logger.error(f"清理临时文件失败 {file_path}: {e}")
+                    
+        else:
+            # 处理 JSON 请求
+            data = request.get_json() or {}
+            custom_content = data.get('content')
+            
+            # 执行发推
+            result = job_scheduler.manual_tweet(custom_content)
         
         if result.get('success'):
             return jsonify({

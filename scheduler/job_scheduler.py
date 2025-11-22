@@ -320,12 +320,13 @@ class JobScheduler:
 
         return status
     
-    def manual_tweet(self, custom_content: str = None) -> dict:
+    def manual_tweet(self, custom_content: str = None, media_files: list = None) -> dict:
         """
         手动触发发推
         
         Args:
             custom_content: 自定义推文内容，如果不提供则自动生成
+            media_files: 媒体文件路径列表 (可选)
             
         Returns:
             发推结果字典
@@ -351,7 +352,7 @@ class JobScheduler:
             # 延迟导入 Twitter 客户端
             from twitter.api_client import twitter_client
             # 发送推文
-            result = twitter_client.post_tweet(tweet_content)
+            result = twitter_client.post_tweet(tweet_content, media_paths=media_files)
 
             if result and result.get('success'):
                 logger.info(f"手动发推成功: {result.get('url')}")
