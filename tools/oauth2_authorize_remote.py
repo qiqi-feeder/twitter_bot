@@ -14,29 +14,50 @@ sys.path.insert(0, str(project_root))
 
 from auth.oauth2_client import OAuth2Client
 from utils.proxy import ProxyManager
+from utils.config_loader import ConfigLoader
 
 
 def load_config():
-    """加载配置文件"""
-    config_path = Path("config/config.yaml")
+    """加载配置文件（支持 config.local.yaml 覆盖）"""
+    # 切换到项目根目录，确保相对路径正确
+    import os
+    project_root = Path(__file__).parent.parent
+    os.chdir(project_root)
+    
+    config_path = project_root / "config" / "config.yaml"
     if not config_path.exists():
-        print("❌ 配置文件不存在: config/config.yaml")
+        print(f"❌ 配置文件不存在: {config_path}")
         return None
     
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    # 使用 ConfigLoader 以支持 config.local.yaml 覆盖
+    try:
+        config_loader = ConfigLoader(str(config_path))
+        return config_loader.load_config()
+    except Exception as e:
+        print(f"❌ 加载配置文件失败: {e}")
+        return None
 
 
 def save_tokens(access_token, refresh_token, expires_in):
-    """保存令牌到配置文件"""
-    config_path = Path("config/config.yaml")
+    """保存令牌到配置文件（保存到 config.local.yaml）"""
+    # 保存到 config.local.yaml，而不是覆盖 config.yaml
+    project_root = Path(__file__).parent.parent
+    local_config_path = project_root / "config" / "config.local.yaml"
     
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = yaml.safe_load(f)
+    # 读取现有的 local config（如果存在）
+    if local_config_path.exists():
+        with open(local_config_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f) or {}
+    else:
+        config = {}
     
     # 计算过期时间
     from datetime import datetime, timedelta
     expires_at = datetime.now() + timedelta(seconds=expires_in)
+    
+    # 确保 twitter 配置存在
+    if 'twitter' not in config:
+        config['twitter'] = {}
     
     # 更新配置
     config['twitter']['access_token'] = access_token
@@ -44,10 +65,10 @@ def save_tokens(access_token, refresh_token, expires_in):
     config['twitter']['token_expires_at'] = expires_at.isoformat()
     
     # 保存配置
-    with open(config_path, 'w', encoding='utf-8') as f:
+    with open(local_config_path, 'w', encoding='utf-8') as f:
         yaml.dump(config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
     
-    print(f"\n✅ 令牌已保存到: {config_path}")
+    print(f"\n✅ 令牌已保存到: {local_config_path}")
     print(f"   Access Token: {access_token[:30]}...")
     print(f"   Refresh Token: {refresh_token[:30]}...")
     print(f"   过期时间: {expires_at.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -96,7 +117,7 @@ def main():
         print(f"✅ Client Secret: {client_secret[:20]}...")
     
     # 回调 URI - 远程服务器使用特殊的回调 URI
-    redirect_uri = "http://localhost:8080/callback"
+    redirect_uri = "http://localhost:5050/callback"
     
     # 获取代理配置
     proxy_manager = ProxyManager()

@@ -173,33 +173,54 @@ class LLMClient:
     
     def validate_api_key(self) -> bool:
         """
-        验证 OpenAI API Key 是否有效
+        验证 API Key 是否有效（支持 OpenAI 和 Grok）
 
         Returns:
             API Key 是否有效
         """
         if not self.client:
-            logger.error("OpenAI 客户端未初始化")
-            return False
+            logger.warning("LLM 客户端未初始化，跳过 API Key 验证")
+            # 返回 True 以允许系统继续运行（LLM 功能可选）
+            return True
 
         try:
+            # 获取 provider 配置
+            provider = self.openai_config.get('provider', 'openai').lower()
+            
+            # 根据 provider 选择合适的模型
+            if provider == 'grok':
+                model = self.openai_config.get('model', 'grok-beta')
+            else:
+                model = self.openai_config.get('model', 'gpt-3.5-turbo')
+            
+            logger.info(f"验证 {provider.upper()} API Key，使用模型: {model}")
+            
             # 发送一个简单的请求来验证 API Key
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=model,
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=5
             )
 
-            logger.info("OpenAI API Key 验证成功")
+            logger.info(f"{provider.upper()} API Key 验证成功")
             return True
 
         except Exception as e:
             error_msg = str(e)
+            provider = self.openai_config.get('provider', 'openai').upper()
+            
             if "authentication" in error_msg.lower() or "api_key" in error_msg.lower():
-                logger.error("OpenAI API Key 验证失败")
+                logger.error(f"{provider} API Key 验证失败：认证错误")
+            elif "model" in error_msg.lower():
+                logger.warning(f"{provider} API Key 可能有效，但模型不可用")
+                # 模型问题不应阻止系统启动
+                return True
             else:
-                logger.error(f"验证 OpenAI API Key 时发生错误: {e}")
-            return False
+                logger.warning(f"验证 {provider} API Key 时发生错误: {e}")
+            
+            # 返回 True 以允许系统继续运行（LLM 功能可选）
+            logger.info(f"LLM API 验证失败，但系统将继续运行（LLM 功能将不可用）")
+            return True
 
 
 # 全局 LLM 客户端实例

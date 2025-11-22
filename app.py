@@ -390,10 +390,9 @@ def initialize_system():
         logger.error("Twitter API 连接测试失败")
         return False
     
-    # 验证 OpenAI API Key
+    # 验证 LLM API Key（非阻塞，仅警告）
     if not llm_client.validate_api_key():
-        logger.error("OpenAI API Key 验证失败，请检查配置")
-        return False
+        logger.warning("LLM API Key 验证失败，LLM 功能将不可用，但系统将继续运行")
     
     # 设置每日大盘复盘任务（如果启用）
     scheduler_config = config_loader.get_scheduler_config()

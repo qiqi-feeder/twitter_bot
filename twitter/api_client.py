@@ -39,42 +39,57 @@ class TwitterAPIClient:
                 if proxies:
                     proxy_url = proxies.get('https')
                     logger.info("为 Twitter 客户端配置代理")
+                    # 设置环境变量，tweepy 会自动使用这些环境变量
+                    proxy_manager.set_env_proxies()
 
             # 优先使用 OAuth 2.0
             if access_token and token_manager.get_refresh_token():
                 logger.info("使用 OAuth 2.0 认证方式")
                 self.use_oauth2 = True
 
-                # 获取 client_id 和 client_secret（OAuth 2.0 需要）
+                # 获取配置
                 from utils.config_loader import config_loader
                 twitter_config = config_loader.get_twitter_config()
-                client_id = twitter_config.get('client_id')
-                client_secret = twitter_config.get('client_secret')
-
-                # 创建 Tweepy 客户端 (OAuth 2.0)
-                # 注意：tweepy 的 Client 在使用 OAuth 2.0 User Context 时需要 consumer_key 和 consumer_secret
-                # 这里我们使用 client_id 作为 consumer_key，client_secret 作为 consumer_secret
+                
+                # 创建 Tweepy 客户端 (OAuth 2.0 User Context)
+                # 用于发送推文、读取数据等 v2 API
                 self.client = tweepy.Client(
                     bearer_token=access_token,
-                    consumer_key=client_id,
-                    consumer_secret=client_secret,
-                    wait_on_rate_limit=True,
-                    proxy=proxy_url
+                    wait_on_rate_limit=True
                 )
 
                 logger.info("Twitter API 客户端初始化成功（OAuth 2.0）")
 
-                # 初始化 v1.1 API 用于上传媒体 (尝试使用 OAuth 2.0 Access Token)
-                # 注意：Twitter API v1.1 的 media/upload 通常需要 OAuth 1.0a User Context
-                # 但某些情况下 OAuth 2.0 Bearer Token 可能可行，或者我们需要提示用户
-                self.api = tweepy.Client(bearer_token=access_token)
-                # 为了兼容性，我们尝试用 OAuth 1.0a 方式初始化 API v1.1
-                # 如果配置了 consumer key/secret，即使没有 access token secret，我们也可以尝试
-                consumer_key = twitter_config.get('consumer_key') or client_id
-                consumer_secret = twitter_config.get('consumer_secret') or client_secret
+                # 尝试初始化 OAuth 1.0a 客户端用于媒体上传
+                # OAuth 1.0a 是可选的，仅用于 v1.1 API 的 media/upload 端点
+                consumer_key = twitter_config.get('consumer_key')
+                consumer_secret = twitter_config.get('consumer_secret')
+                access_token_1_0a = twitter_config.get('access_token_1_0a')
+                access_token_secret = twitter_config.get('access_token_secret')
                 
-                auth = tweepy.OAuth2BearerHandler(access_token)
-                self.api_v1 = tweepy.API(auth, proxy=proxy_url)
+                if all([consumer_key, consumer_secret, access_token_1_0a, access_token_secret]):
+                    try:
+                        # 创建 OAuth 1.0a 认证
+                        auth_1_0a = tweepy.OAuth1UserHandler(
+                            consumer_key=consumer_key,
+                            consumer_secret=consumer_secret,
+                            access_token=access_token_1_0a,
+                            access_token_secret=access_token_secret
+                        )
+                        
+                        # 创建 v1.1 API 客户端（用于媒体上传）
+                        # 注意：tweepy.API 会自动使用环境变量中的代理配置
+                        self.api_v1 = tweepy.API(auth_1_0a, wait_on_rate_limit=True)
+                        
+                        logger.info("OAuth 1.0a 客户端初始化成功（用于媒体上传）")
+                    except Exception as e:
+                        logger.warning(f"OAuth 1.0a 客户端初始化失败: {e}")
+                        logger.warning("媒体上传功能将不可用，但其他功能正常")
+                        self.api_v1 = None
+                else:
+                    logger.info("未配置 OAuth 1.0a 凭据，媒体上传功能将不可用")
+                    logger.info("如需上传图片，请配置 consumer_key, consumer_secret, access_token_1_0a, access_token_secret")
+                    self.api_v1 = None
 
 
             else:
@@ -199,16 +214,26 @@ class TwitterAPIClient:
         
         try:
             # 获取当前认证用户信息
-            user = self.client.get_me()
+            # user_auth=False 表示使用 bearer token 认证，而不是 OAuth 1.0a
+            # user_fields 指定返回 public_metrics 数据
+            user = self.client.get_me(
+                user_fields=['public_metrics'],
+                user_auth=False
+            )
             
             if user.data:
+                # 安全获取 public_metrics
+                public_metrics = getattr(user.data, 'public_metrics', None)
+                if public_metrics is None:
+                    public_metrics = {}
+                
                 user_info = {
                     'id': user.data.id,
                     'username': user.data.username,
                     'name': user.data.name,
-                    'followers_count': getattr(user.data, 'public_metrics', {}).get('followers_count', 0),
-                    'following_count': getattr(user.data, 'public_metrics', {}).get('following_count', 0),
-                    'tweet_count': getattr(user.data, 'public_metrics', {}).get('tweet_count', 0)
+                    'followers_count': public_metrics.get('followers_count', 0),
+                    'following_count': public_metrics.get('following_count', 0),
+                    'tweet_count': public_metrics.get('tweet_count', 0)
                 }
                 
                 logger.info(f"获取用户信息成功: @{user_info['username']}")
@@ -257,7 +282,7 @@ class TwitterAPIClient:
         
         try:
             # 获取当前用户信息
-            user = self.client.get_me()
+            user = self.client.get_me(user_auth=False)
             if not user.data:
                 logger.error("无法获取用户信息")
                 return []
@@ -266,7 +291,8 @@ class TwitterAPIClient:
             tweets = self.client.get_users_tweets(
                 id=user.data.id,
                 max_results=min(count, 100),  # API 限制
-                tweet_fields=['created_at', 'public_metrics']
+                tweet_fields=['created_at', 'public_metrics'],
+                user_auth=False
             )
             
             if tweets.data:

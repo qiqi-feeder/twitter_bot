@@ -4,16 +4,17 @@ import os
 def test_media_upload():
     url = 'http://localhost:5000/tweet/post'
     
-    # Create a dummy image file
-    image_path = 'test_image.jpg'
-    with open(image_path, 'wb') as f:
-        f.write(os.urandom(1024))  # 1KB dummy file
+    # Use existing test image
+    image_path = 'assets/test_tesla.jpg'
+    print(f"✅ Using test image: {image_path}")
     
-    files = {
-        'images': open(image_path, 'rb')
-    }
+    # Open the file for uploading
+    # Use tuple list format: [(field_name, file_object)]
+    files = [
+        ('images', open(image_path, 'rb'))
+    ]
     data = {
-        'content': 'Test tweet with image via API'
+        'content': f'Test tweet with image - {int(__import__("time").time())}'
     }
     
     try:
@@ -23,7 +24,10 @@ def test_media_upload():
     except Exception as e:
         print(f"Error: {e}")
     finally:
-        files['images'].close()
+        # Close the file
+        if files:
+            for _, file_obj in files:
+                file_obj.close()
         if os.path.exists(image_path):
             os.remove(image_path)
 

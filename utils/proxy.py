@@ -106,6 +106,19 @@ class ProxyManager:
             代理是否启用
         """
         return self.proxies is not None
+    
+    def set_env_proxies(self):
+        """
+        设置代理环境变量
+        
+        某些库（如 tweepy）需要通过环境变量来配置代理
+        """
+        import os
+        
+        if self.proxies:
+            os.environ['HTTP_PROXY'] = self.proxies.get('http', '')
+            os.environ['HTTPS_PROXY'] = self.proxies.get('https', '')
+            logger.debug("已设置代理环境变量")
 
 
 # 全局代理管理器实例
