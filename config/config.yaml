@@ -1,103 +1,50 @@
-# Twitter 自动发推系统配置文件
-
-# Twitter API 配置
-twitter:
-  # ===== OAuth 2.0 配置（推荐使用）=====
-  # Twitter OAuth 2.0 Access Token
-  access_token: "dnpCRnpXeWE4b2lzQk10MDlWSmhBRURkVG9teW9ISWRySV9TMnotaXFMNERmOjE3NjEyOTkxMzQyNjU6MTowOmF0OjE"
-
-  # Twitter OAuth 2.0 Refresh Token
-  refresh_token: "a2ZTZV9PcVk0WXlwNzBwNFZBUkVaS2Y1cWRLd0xxM0NVei1DUF9kSGN4U0kxOjE3NjEyOTkxMzQyNjU6MToxOnJ0OjE"
-
-  # Token 过期时间（ISO 格式，自动更新）
-  token_expires_at: ""
-
-  # Twitter OAuth 2.0 Client ID（如果有的话）
-  client_id: "ZXNOR2FOcW1yQ0NOSUEwZ2F4RG86MTpjaQ"
-
-  # Twitter OAuth 2.0 Client Secret（可选）
-  client_secret: "dqNFn-c0i7Cbjuq5-pnVJOlTdW8jWnKaluge-aWWAanU-ZUaky"
-
-  # ===== OAuth 1.0a 配置（旧版，兼容性保留）=====
-  # Twitter API v2 Bearer Token
-  bearer_token: "your_bearer_token_here"
-
-  # Twitter API v2 Access Token Secret (OAuth 1.0a)
-  access_token_secret: "your_access_token_secret_here"
-
-  # Twitter API v2 Consumer Key (API Key)
-  consumer_key: "your_consumer_key_here"
-
-  # Twitter API v2 Consumer Secret (API Secret)
-  consumer_secret: "your_consumer_secret_here"
-
-# LLM API 配置（支持 OpenAI 和 Grok）
+flask:
+  debug: false
+  host: 0.0.0.0
+  port: 5000
+logging:
+  console_output: true
+  file_path: logs/twitter_bot.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
 openai:
-  # 选择 LLM 提供商: "openai" 或 "grok"
-  provider: "grok"
+  api_key: your_openai_api_key_here
+  grok_api_key: your_grok_api_key_here
+  grok_base_url: https://api.x.ai/v1
+  model: grok-4-fast-reasoning
+  prompt_template: '请生成一条有趣且有价值的推文，内容应该：
 
-  # OpenAI API Key（如果使用 OpenAI）
-  api_key: "your_openai_api_key_here"
-
-  # Grok API Key（如果使用 Grok）
-  grok_api_key: "your_grok_api_key_here"
-
-  # 使用的模型
-  # OpenAI: "gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"
-  # Grok: "grok-3", "grok-2-latest", "grok-vision-beta"
-  model: "grok-4-fast-reasoning"
-
-  # Grok API Base URL（通常不需要修改）
-  grok_base_url: "https://api.x.ai/v1"
-
-  # 生成推文的提示词（用于简单推文生成）
-  prompt_template: |
-    请生成一条有趣且有价值的推文，内容应该：
     1. 长度在100-280字符之间
+
     2. 包含实用信息或有趣观点
+
     3. 适合在Twitter上分享
+
     4. 语言风格轻松友好
 
+
     主题可以是：技术、生活感悟、学习心得、行业观察等。
+
     请直接返回推文内容，不要包含其他说明文字。
 
-# 代理配置
+    '
+  provider: grok
 proxy:
-  # SOCKS5 代理地址，格式：socks5://user:pass@ip:port
-  # 如果不需要认证，格式：socks5://ip:port
-  socks5_url: "socks5://032bd1fc:59138690@us468.kookeey.info:20146"
-  # 是否启用代理
   enabled: true
-
-# 定时任务配置
+  socks5_url: socks5://032bd1fc:59138690@us468.kookeey.info:20146
 scheduler:
-  # 每天发推次数
-  tweets_per_day: 1
-  # 发推时间点（24小时制，基于设置的时区）
+  fixed_content: 'Good morning! 🌅 Have a great day! #DailyGreeting'
+  timezone: America/New_York
   tweet_times:
-    - "08:00"  # 早上8点（美国时间）
-  # 时区设置（美国东部时间）
-  # 可选: America/New_York, America/Los_Angeles, America/Chicago, America/Denver
-  timezone: "America/New_York"
-  # 固定推文内容（如果设置，则每次发送固定内容；如果为空或null，则使用LLM生成）
-  fixed_content: "Good morning! 🌅 Have a great day! #DailyGreeting"
-
-# Flask 应用配置
-flask:
-  # 服务器主机
-  host: "0.0.0.0"
-  # 服务器端口
-  port: 5000
-  # 调试模式
-  debug: false
-
-# 日志配置
-logging:
-  # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
-  level: "INFO"
-  # 日志文件路径
-  file_path: "logs/twitter_bot.log"
-  # 日志格式
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  # 是否同时输出到控制台
-  console_output: true
+  - 08:00
+  tweets_per_day: 1
+twitter:
+  access_token: bTRXUmJtQ2YwRjJ5RGFJOVltUnhyZ1kyVnk1RmVEaFk3RTNtYjhPSHd4M003OjE3NjM4NDc0NTc5MDk6MToxOmF0OjE
+  access_token_secret: your_access_token_secret_here
+  bearer_token: your_bearer_token_here
+  client_id: ZXNOR2FOcW1yQ0NOSUEwZ2F4RG86MTpjaQ
+  client_secret: dqNFn-c0i7Cbjuq5-pnVJOlTdW8jWnKaluge-aWWAanU-ZUaky
+  consumer_key: your_consumer_key_here
+  consumer_secret: your_consumer_secret_here
+  refresh_token: UnBDZUdpbF9qLVZkOC1nRnM5ejdyWFl6dGE2eHFBbzVEdF9md29KVzhJazJ6OjE3NjM4NDc0NTc5MDk6MToxOnJ0OjE
+  token_expires_at: '2025-11-23T07:37:38.063910'

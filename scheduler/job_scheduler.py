@@ -322,19 +322,23 @@ class JobScheduler:
 
         return status
     
-    def manual_tweet(self, custom_content: str = None, media_files: list = None) -> dict:
+    def manual_tweet(self, custom_content: str = None, media_files: list = None, job_id: str = None) -> dict:
         """
         手动触发发推
         
         Args:
             custom_content: 自定义推文内容，如果不提供则自动生成
             media_files: 媒体文件路径列表 (可选)
+            job_id: 关联的任务 ID (用于更新历史记录)
             
         Returns:
             发推结果字典
         """
+        # 延迟导入以避免循环依赖
+        from history.history_manager import history_manager
+        
         try:
-            logger.info("开始手动发推")
+            logger.info(f"开始手动发推 (Job ID: {job_id})")
 
             # 获取推文内容
             if custom_content:
@@ -345,6 +349,8 @@ class JobScheduler:
                 from llm.llm_client import llm_client
                 tweet_content = llm_client.generate_tweet()
                 if not tweet_content:
+                    if job_id:
+                        history_manager.update_status(job_id, 'failed', error='生成推文内容失败')
                     return {
                         'success': False,
                         'error': '生成推文内容失败'
@@ -358,6 +364,13 @@ class JobScheduler:
 
             if result and result.get('success'):
                 logger.info(f"手动发推成功: {result.get('url')}")
+                if job_id:
+                    history_manager.update_status(
+                        job_id, 
+                        'sent', 
+                        tweet_id=result.get('id'), 
+                        tweet_url=result.get('url')
+                    )
                 return {
                     'success': True,
                     'tweet_id': result.get('id'),
@@ -365,14 +378,19 @@ class JobScheduler:
                     'content': tweet_content
                 }
             else:
-                logger.error("手动发推失败")
+                error_msg = '发送推文失败'
+                logger.error(error_msg)
+                if job_id:
+                    history_manager.update_status(job_id, 'failed', error=error_msg)
                 return {
                     'success': False,
-                    'error': '发送推文失败'
+                    'error': error_msg
                 }
                 
         except Exception as e:
             logger.error(f"手动发推时发生错误: {e}")
+            if job_id:
+                history_manager.update_status(job_id, 'failed', error=str(e))
             return {
                 'success': False,
                 'error': str(e)
@@ -391,6 +409,9 @@ class JobScheduler:
         Returns:
             结果字典
         """
+        # 延迟导入以避免循环依赖
+        from history.history_manager import history_manager
+        
         try:
             # 解析时间
             tz = pytz_timezone(timezone_str)
@@ -408,9 +429,18 @@ class JobScheduler:
             self.scheduler.add_job(
                 func=self.manual_tweet,
                 trigger=DateTrigger(run_date=run_date, timezone=tz),
-                args=[content, media_files],
+                args=[content, media_files, job_id],  # 传递 job_id
                 id=job_id,
                 name=f'定时发推: {content[:20]}...'
+            )
+            
+            # 记录到历史
+            history_manager.add_record(
+                job_id=job_id,
+                content=content,
+                scheduled_time=run_date.isoformat(),
+                status='pending',
+                media_files=media_files
             )
             
             logger.info(f"已安排定时发推任务: {run_date} (ID: {job_id})")
@@ -424,6 +454,42 @@ class JobScheduler:
             
         except Exception as e:
             logger.error(f"安排定时发推任务失败: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def cancel_job(self, job_id: str) -> dict:
+        """
+        取消任务
+        
+        Args:
+            job_id: 任务 ID
+            
+        Returns:
+            结果字典
+        """
+        from history.history_manager import history_manager
+        
+        try:
+            # 检查任务是否存在于调度器中
+            job = self.scheduler.get_job(job_id)
+            if job:
+                self.scheduler.remove_job(job_id)
+                logger.info(f"已取消调度器任务: {job_id}")
+            else:
+                logger.warning(f"调度器中未找到任务: {job_id} (可能已执行或不存在)")
+            
+            # 更新历史记录状态
+            history_manager.update_status(job_id, 'cancelled')
+            
+            return {
+                'success': True,
+                'message': '任务已取消'
+            }
+            
+        except Exception as e:
+            logger.error(f"取消任务失败: {e}")
             return {
                 'success': False,
                 'error': str(e)

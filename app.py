@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 import signal
 import sys
 import os
+import time
 
 # 添加项目根目录到 Python 路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -29,21 +30,79 @@ def create_app():
     flask_config = config_loader.get_flask_config()
     app.config.update(flask_config)
     
+    # 设置 Secret Key (用于 Session)
+    app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev_secret_key_123')
+    
     return app
 
 
 # 创建 Flask 应用实例
 app = create_app()
 
+# 认证拦截器
+@app.before_request
+def require_login():
+    # 允许访问的端点
+    allowed_endpoints = ['login', 'static', 'status']
+    if request.endpoint in allowed_endpoints:
+        return
+
+    # 检查 Session
+    from flask import session, redirect, url_for
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """登录页面"""
+    from flask import render_template, session, redirect, url_for
+    
+    if request.method == 'GET':
+        if session.get('logged_in'):
+            return redirect(url_for('compose_page'))
+        return render_template('login.html')
+    
+    # 处理登录请求
+    data = request.get_json() or {}
+    password = data.get('password')
+    
+    # 获取配置的密码
+    flask_config = config_loader.get_flask_config()
+    correct_password = flask_config.get('web_password', 'admin') # 默认密码 admin
+    
+    # 从 config.local.yaml 读取 (如果 config_loader 没有读取到)
+    # 这里假设 config_loader 已经处理了合并逻辑
+    # 为了保险，我们再读一次 config.local.yaml
+    try:
+        import yaml
+        with open(os.path.join(os.path.dirname(__file__), 'config', 'config.local.yaml'), 'r') as f:
+            local_config = yaml.safe_load(f)
+            if local_config and 'web_password' in local_config:
+                correct_password = local_config['web_password']
+    except Exception:
+        pass
+
+    if password == correct_password:
+        session['logged_in'] = True
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Incorrect password'}), 401
+
+
+@app.route('/logout')
+def logout():
+    """退出登录"""
+    from flask import session, redirect, url_for
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+
 
 @app.route('/')
 def index():
-    """首页"""
-    return jsonify({
-        'message': 'Twitter 自动发推系统',
-        'version': '1.0.0',
-        'status': 'running'
-    })
+    """首页 (重定向到发推页面)"""
+    from flask import redirect, url_for
+    return redirect(url_for('compose_page'))
 
 
 @app.route('/status')
@@ -86,92 +145,118 @@ def compose_page():
 
 @app.route('/tweet/post', methods=['POST'])
 def post_tweet():
-    """手动发推接口"""
+    """发布推文（支持立即发送和定时发送）"""
     try:
-        # 检查请求类型
-        if request.content_type and 'multipart/form-data' in request.content_type:
-            # 处理文件上传
-            custom_content = request.form.get('content')
-            uploaded_files = request.files.getlist('images')
-            
-            media_files = []
-            if uploaded_files:
-                # 确保临时目录存在
-                import tempfile
-                temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tmp')
-                if not os.path.exists(temp_dir):
-                    os.makedirs(temp_dir)
+        # 处理 multipart/form-data
+        content = request.form.get('content')
+        scheduled_time = request.form.get('scheduled_time')
+        timezone = request.form.get('timezone', 'America/New_York')
+        
+        # 保存上传的图片
+        media_files = []
+        if 'images' in request.files:
+            files = request.files.getlist('images')
+            # 确保上传目录存在
+            upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+            if not os.path.exists(upload_dir):
+                os.makedirs(upload_dir)
                 
-                for file in uploaded_files:
-                    if file and file.filename:
-                        # 保存文件
-                        filename = secure_filename(file.filename)
-                        file_path = os.path.join(temp_dir, filename)
-                        file.save(file_path)
-                        media_files.append(file_path)
-                        logger.info(f"接收到上传文件: {file_path}")
-            
-            # 检查是否是定时发送
-            scheduled_time = request.form.get('scheduled_time')
-            timezone = request.form.get('timezone', 'America/New_York')
+            for file in files:
+                if file and file.filename:
+                    filename = secure_filename(file.filename)
+                    # 添加时间戳防止重名
+                    filename = f"{int(time.time())}_{filename}"
+                    file_path = os.path.join(upload_dir, filename)
+                    file.save(file_path)
+                    media_files.append(file_path)
+                    logger.info(f"已保存上传图片: {file_path}")
 
-            if scheduled_time:
-                # 调度定时任务
-                result = job_scheduler.schedule_one_off_tweet(custom_content, scheduled_time, media_files, timezone)
-            else:
-                # 立即执行发推
-                result = job_scheduler.manual_tweet(custom_content, media_files=media_files)
-            
-            # 清理临时文件 (仅当不是定时任务时清理，或者需要移动文件到持久存储)
-            # 注意：如果是定时任务，文件需要保留直到发送。这里简化处理，假设定时任务时间很短，
-            # 或者我们需要将文件移动到非临时目录。
-            # 为了支持定时发送，我们将文件保留在 tmp 目录，由定时任务执行完后清理（需要修改 manual_tweet）
-            # 或者这里不清理，由系统定期清理 tmp
-            
-            # 暂时策略：如果是立即发送，则清理；如果是定时发送，暂不清理
-            if not scheduled_time:
-                for file_path in media_files:
-                    try:
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                            logger.info(f"清理临时文件: {file_path}")
-                    except Exception as e:
-                        logger.error(f"清理临时文件失败 {file_path}: {e}")
-                    
+        if scheduled_time:
+            result = job_scheduler.schedule_one_off_tweet(content, scheduled_time, media_files, timezone)
         else:
-            # 处理 JSON 请求
-            data = request.get_json() or {}
-            custom_content = data.get('content')
-            scheduled_time = data.get('scheduled_time')
-            timezone = data.get('timezone', 'America/New_York')
+            result = job_scheduler.manual_tweet(content, media_files)
             
-            if scheduled_time:
-                result = job_scheduler.schedule_one_off_tweet(custom_content, scheduled_time, None, timezone)
-            else:
-                result = job_scheduler.manual_tweet(custom_content)
+        # 注意：不再自动清理图片，以便在历史记录中查看
+        # 实际生产环境中可能需要一个定期清理任务
         
         if result.get('success'):
             return jsonify({
                 'success': True,
-                'message': '推文发送成功',
-                'data': {
-                    'tweet_id': result.get('tweet_id'),
-                    'tweet_url': result.get('tweet_url'),
-                    'content': result.get('content')
-                }
+                'message': '推文发送成功' if not scheduled_time else result.get('message'),
+                'data': result
             })
         else:
             return jsonify({
                 'success': False,
-                'message': '推文发送失败',
+                'message': '发送失败',
                 'error': result.get('error')
             }), 400
-            
+
     except Exception as e:
-        logger.error(f"手动发推失败: {e}")
+        logger.error(f"处理发推请求失败: {e}")
         return jsonify({
             'success': False,
-            'message': '发推时发生错误',
+            'message': '系统错误',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    """获取发推历史记录"""
+    from history.history_manager import history_manager
+    import shutil
+    
+    try:
+        history = history_manager.get_history(limit=50)
+        
+        # 确保上传目录存在
+        upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+        
+        # 处理图片路径，转换为 URL
+        for record in history:
+            if record.get('media_files'):
+                processed_files = []
+                for file_path in record['media_files']:
+                    try:
+                        filename = os.path.basename(file_path)
+                        
+                        # 检查文件是否已经在 static/uploads
+                        if 'static/uploads' in file_path:
+                            url = f"/static/uploads/{filename}"
+                            processed_files.append(url)
+                        else:
+                            # 兼容旧路径（如 tmp/）
+                            # 如果文件存在，将其复制到 static/uploads
+                            if os.path.exists(file_path):
+                                target_path = os.path.join(upload_dir, filename)
+                                # 如果目标文件不存在，或者源文件更新，则复制
+                                if not os.path.exists(target_path):
+                                    shutil.copy2(file_path, target_path)
+                                    logger.info(f"迁移旧图片到 uploads: {filename}")
+                                
+                                url = f"/static/uploads/{filename}"
+                                processed_files.append(url)
+                            else:
+                                # 文件丢失，保留原路径或标记错误
+                                logger.warning(f"图片文件未找到: {file_path}")
+                                processed_files.append(file_path)
+                    except Exception as e:
+                        logger.error(f"处理图片路径失败 {file_path}: {e}")
+                        processed_files.append(file_path)
+                        
+                record['media_urls'] = processed_files
+                
+        return jsonify({
+            'success': True,
+            'data': history
+        })
+    except Exception as e:
+        logger.error(f"获取历史记录失败: {e}")
+        return jsonify({
+            'success': False,
             'error': str(e)
         }), 500
 
@@ -395,6 +480,26 @@ def signal_handler(signum, frame):
     
     logger.info("系统已关闭")
     sys.exit(0)
+
+
+
+
+
+@app.route('/api/jobs/<job_id>/cancel', methods=['POST'])
+def cancel_job(job_id):
+    """取消定时任务"""
+    try:
+        result = job_scheduler.cancel_job(job_id)
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        logger.error(f"取消任务失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 def initialize_system():

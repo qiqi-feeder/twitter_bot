@@ -1,0 +1,28 @@
+[
+  {
+    "id": "one_off_abc1b401459f4dc896f3b7cc35102eaa",
+    "content": "history function test",
+    "scheduled_time": "2025-11-22T21:09:00+00:00",
+    "status": "cancelled",
+    "created_at": "2025-11-23T05:03:14.602593",
+    "media_files": [
+      "/root/workspace/twitter_bot/tmp/logo.png"
+    ],
+    "tweet_id": null,
+    "tweet_url": null,
+    "error": null
+  },
+  {
+    "id": "one_off_5b70db32ddd24ab692003a352d3f1d62",
+    "content": "test for history ",
+    "scheduled_time": "2025-11-22T21:28:00+00:00",
+    "status": "sent",
+    "created_at": "2025-11-23T05:26:25.877188",
+    "media_files": [
+      "/root/workspace/twitter_bot/static/uploads/1763846785_image.jpg"
+    ],
+    "tweet_id": "1992344346704699813",
+    "tweet_url": "https://twitter.com/user/status/1992344346704699813",
+    "error": null
+  }
+]

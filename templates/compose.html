@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +8,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body>
     <div class="container">
         <div class="header">
-            <h1>Compose Tweet</h1>
-            <button id="themeToggle" class="theme-toggle" title="Switch Theme">
-                <i class="fas fa-moon"></i>
-            </button>
+            <div class="header-title"><i class="fab fa-twitter"></i> Compose Tweet</div>
+            <div class="header-controls">
+                <button id="themeToggle" class="icon-btn" title="Toggle Theme"><i class="fas fa-moon"></i></button>
+                <a href="/logout" class="icon-btn" title="Logout" style="text-decoration: none; color: inherit;"><i
+                        class="fas fa-sign-out-alt"></i></a>
+            </div>
         </div>
 
         <div class="compose-box">
@@ -21,10 +25,10 @@
                 <!-- Placeholder avatar -->
                 <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Avatar">
             </div>
-            
+
             <div class="content-area">
                 <textarea id="tweetText" placeholder="What is happening?!"></textarea>
-                
+
                 <div id="mediaPreview" class="media-preview">
                     <button id="removeMedia" class="remove-media" title="Remove">
                         <i class="fas fa-times"></i>
@@ -85,12 +89,26 @@
                             <i class="far fa-calendar-alt"></i>
                         </button>
                     </div>
-                    
+
                     <div class="actions">
                         <div id="charCount" class="char-count"></div>
                         <button id="postBtn" class="post-btn" disabled>Post</button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <div class="history-header">
+                <h2>Tweet History</h2>
+                <button id="refreshHistoryBtn" class="icon-btn" title="Refresh">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div id="historyList" class="history-list">
+                <!-- History items will be populated here -->
+                <div class="loading-spinner">Loading...</div>
             </div>
         </div>
     </div>
@@ -99,4 +117,5 @@
 
     <script src="/static/js/main.js"></script>
 </body>
+
 </html>

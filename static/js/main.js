@@ -18,9 +18,181 @@ document.addEventListener('DOMContentLoaded', () => {
     const charCount = document.getElementById('charCount');
     const toast = document.getElementById('toast');
 
+    // History Elements
+    const historyList = document.getElementById('historyList');
+    const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+
     let confirmedScheduleTime = null;
 
     // --- Theme Switcher ---
+    // ... (existing code) ...
+
+    // --- Initial Load ---
+    loadHistory();
+
+    refreshHistoryBtn.addEventListener('click', () => {
+        refreshHistoryBtn.classList.add('fa-spin');
+        loadHistory().finally(() => {
+            setTimeout(() => refreshHistoryBtn.classList.remove('fa-spin'), 500);
+        });
+    });
+
+    // --- History Logic ---
+    async function loadHistory() {
+        try {
+            const response = await fetch('/api/history');
+            const result = await response.json();
+
+            if (result.success) {
+                renderHistory(result.data);
+            } else {
+                historyList.innerHTML = '<div class="loading-spinner">Failed to load history</div>';
+            }
+        } catch (error) {
+            console.error('Error loading history:', error);
+            historyList.innerHTML = '<div class="loading-spinner">Network error</div>';
+        }
+    }
+
+    function renderHistory(items) {
+        if (!items || items.length === 0) {
+            historyList.innerHTML = '<div class="loading-spinner">No history yet</div>';
+            return;
+        }
+
+        historyList.innerHTML = items.map(item => {
+            let statusClass = '';
+            let statusIcon = '';
+            let actions = '';
+
+            switch (item.status) {
+                case 'pending':
+                    statusClass = 'status-pending';
+                    statusIcon = '⏳ Pending';
+                    actions = `<button class="btn-sm btn-outline-danger" onclick="cancelJob('${item.id}')">Cancel</button>`;
+                    break;
+                case 'sent':
+                    statusClass = 'status-sent';
+                    statusIcon = '✅ Sent';
+                    if (item.tweet_url) {
+                        actions = `<a href="${item.tweet_url}" target="_blank" class="btn-sm btn-outline-primary">View <i class="fas fa-external-link-alt"></i></a>`;
+                    }
+                    break;
+                case 'failed':
+                    statusClass = 'status-failed';
+                    statusIcon = '❌ Failed';
+                    break;
+                case 'cancelled':
+                    statusClass = 'status-cancelled';
+                    statusIcon = '🚫 Cancelled';
+                    break;
+                default:
+                    statusClass = 'status-cancelled';
+                    statusIcon = item.status;
+            }
+
+            // Format time
+            const date = new Date(item.created_at);
+            const timeStr = date.toLocaleString();
+
+            let scheduledInfo = '';
+            if (item.scheduled_time && item.status === 'pending') {
+                const scheduledDate = new Date(item.scheduled_time);
+                scheduledInfo = `<div style="font-size: 12px; color: var(--primary-color); margin-top: 4px;">Scheduled for: ${scheduledDate.toLocaleString()}</div>`;
+            }
+
+            let mediaPreview = '';
+            if (item.media_urls && item.media_urls.length > 0) {
+                mediaPreview = `<div class="history-media-preview" style="display: flex; gap: 8px; margin-top: 8px;">
+                    ${item.media_urls.map(url => `<img src="${url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);">`).join('')}
+                </div>`;
+            }
+
+            return `
+                <div class="history-item">
+                    <div class="history-item-header">
+                        <span class="status-badge ${statusClass}">${statusIcon}</span>
+                        <span class="history-time">${timeStr}</span>
+                    </div>
+                    <div class="history-content">
+                        ${escapeHtml(item.content || '')}
+                    </div>
+                    ${mediaPreview}
+                    ${scheduledInfo}
+                    ${item.error ? `<div style="font-size: 12px; color: #f4212e;">Error: ${item.error}</div>` : ''}
+                    <div class="history-actions">
+                        ${actions}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Expose cancelJob to global scope for onclick
+    window.cancelJob = async (jobId) => {
+        if (!confirm('Are you sure you want to cancel this tweet?')) return;
+
+        try {
+            const response = await fetch(`/api/jobs/${jobId}/cancel`, {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                showToast('Job cancelled', false);
+                loadHistory();
+            } else {
+                showToast(result.error || 'Failed to cancel', true);
+            }
+        } catch (error) {
+            showToast('Network error', true);
+        }
+    };
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // --- Scheduling Modal ---
+    // ... (existing code) ...
+
+    // --- Submission ---
+    postBtn.addEventListener('click', async () => {
+        // ... (existing code) ...
+
+        try {
+            const response = await fetch('/tweet/post', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(result.message || 'Success!', false);
+                // Reset form
+                tweetText.value = '';
+                mediaInput.value = '';
+                mediaPreview.style.display = 'none';
+                scheduleTime.value = '';
+                confirmedScheduleTime = null; // Reset confirmed time
+                nyTimeDisplay.textContent = 'Select time...';
+                updatePostButtonText();
+                updateState();
+
+                // Reload history
+                loadHistory();
+            } else {
+                showToast(result.message || 'Failed to post', true);
+            }
+        } catch (error) {
+            // ...
+        } finally {
+            // ...
+        }
+    });
     // Check saved preference
     const savedTheme = localStorage.getItem('theme') || 'dark';
     setTheme(savedTheme);
@@ -110,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     closeScheduleModal.addEventListener('click', closeModal);
-    
+
     // Close on click outside
     scheduleModal.addEventListener('click', (e) => {
         if (e.target === scheduleModal) {
@@ -128,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const date = new Date(scheduleTime.value);
-        
+
         // Format to New York time
         const options = {
             timeZone: 'America/New_York',
@@ -220,9 +392,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 mediaInput.value = '';
                 mediaPreview.style.display = 'none';
                 scheduleTime.value = '';
-                scheduleSection.classList.remove('active');
+                confirmedScheduleTime = null; // Reset confirmed time
+                nyTimeDisplay.textContent = 'Select time...';
                 updatePostButtonText();
                 updateState();
+
+                // Reload history
+                loadHistory();
             } else {
                 showToast(result.message || 'Failed to post', true);
             }
