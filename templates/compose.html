@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Bot - Compose</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Compose Tweet</h1>
+            <button id="themeToggle" class="theme-toggle" title="Switch Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+        <div class="compose-box">
+            <div class="avatar">
+                <!-- Placeholder avatar -->
+                <img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png" alt="Avatar">
+            </div>
+            
+            <div class="content-area">
+                <textarea id="tweetText" placeholder="What is happening?!"></textarea>
+                
+                <div id="mediaPreview" class="media-preview">
+                    <button id="removeMedia" class="remove-media" title="Remove">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <img id="previewImg" src="" alt="Media Preview">
+                </div>
+
+                <!-- Schedule Modal (Hidden by default) -->
+                <div id="scheduleModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>Schedule Post</h2>
+                            <button id="closeScheduleModal" class="close-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="time-comparison">
+                                <div class="time-col">
+                                    <label><i class="fas fa-map-marker-alt"></i> Local Time</label>
+                                    <input type="datetime-local" id="scheduleTime" class="schedule-input">
+                                </div>
+                                <div class="time-arrow">
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                                <div class="time-col">
+                                    <label><i class="fas fa-globe-americas"></i> New York Time</label>
+                                    <div id="nyTimeDisplay" class="time-display">Select time...</div>
+                                </div>
+                            </div>
+                            <div class="timezone-info">
+                                Target Timezone: America/New_York
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="clearScheduleBtn" class="btn-text">Clear</button>
+                            <button id="confirmScheduleBtn" class="btn-primary">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="tools">
+                        <button class="tool-btn" onclick="document.getElementById('mediaInput').click()" title="Media">
+                            <i class="far fa-image"></i>
+                            <input type="file" id="mediaInput" accept="image/*">
+                        </button>
+                        <button class="tool-btn" title="GIF (Not implemented)">
+                            <i class="fas fa-film"></i>
+                        </button>
+                        <button class="tool-btn" title="Poll (Not implemented)">
+                            <i class="fas fa-poll"></i>
+                        </button>
+                        <button class="tool-btn" title="Emoji (Not implemented)">
+                            <i class="far fa-smile"></i>
+                        </button>
+                        <button class="tool-btn" id="scheduleBtn" title="Schedule">
+                            <i class="far fa-calendar-alt"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="actions">
+                        <div id="charCount" class="char-count"></div>
+                        <button id="postBtn" class="post-btn" disabled>Post</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

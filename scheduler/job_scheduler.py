@@ -10,7 +10,9 @@ from datetime import datetime
 from typing import List, Callable
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 from pytz import timezone as pytz_timezone
+import uuid
 from utils.config_loader import config_loader
 from utils.logger import logger
 
@@ -376,6 +378,57 @@ class JobScheduler:
                 'error': str(e)
             }
     
+    def schedule_one_off_tweet(self, content: str, scheduled_time: str, media_files: list = None, timezone_str: str = 'America/New_York') -> dict:
+        """
+        安排一次性发推任务
+        
+        Args:
+            content: 推文内容
+            scheduled_time: 计划发送时间 (ISO 格式字符串, e.g., '2023-01-01T12:00')
+            media_files: 媒体文件路径列表 (可选)
+            timezone_str: 时区字符串
+            
+        Returns:
+            结果字典
+        """
+        try:
+            # 解析时间
+            tz = pytz_timezone(timezone_str)
+            # 前端传来的 datetime-local 格式通常是 'YYYY-MM-DDTHH:MM'
+            run_date = datetime.fromisoformat(scheduled_time)
+            
+            # 如果时间没有时区信息，假定为指定时区
+            if run_date.tzinfo is None:
+                run_date = tz.localize(run_date)
+            
+            # 生成唯一 Job ID
+            job_id = f"one_off_{uuid.uuid4().hex}"
+            
+            # 添加任务
+            self.scheduler.add_job(
+                func=self.manual_tweet,
+                trigger=DateTrigger(run_date=run_date, timezone=tz),
+                args=[content, media_files],
+                id=job_id,
+                name=f'定时发推: {content[:20]}...'
+            )
+            
+            logger.info(f"已安排定时发推任务: {run_date} (ID: {job_id})")
+            
+            return {
+                'success': True,
+                'message': f'推文已安排在 {run_date.strftime("%Y-%m-%d %H:%M:%S %Z")} 发送',
+                'job_id': job_id,
+                'scheduled_time': run_date.isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"安排定时发推任务失败: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
     def update_schedule(self, tweet_times: List[str] = None, fixed_content: str = None, timezone_str: str = None):
         """
         更新定时任务配置

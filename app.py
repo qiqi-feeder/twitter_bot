@@ -77,6 +77,13 @@ def status():
         }), 500
 
 
+@app.route('/compose')
+def compose_page():
+    """发推页面"""
+    from flask import render_template
+    return render_template('compose.html')
+
+
 @app.route('/tweet/post', methods=['POST'])
 def post_tweet():
     """手动发推接口"""
@@ -104,25 +111,44 @@ def post_tweet():
                         media_files.append(file_path)
                         logger.info(f"接收到上传文件: {file_path}")
             
-            # 执行发推
-            result = job_scheduler.manual_tweet(custom_content, media_files=media_files)
+            # 检查是否是定时发送
+            scheduled_time = request.form.get('scheduled_time')
+            timezone = request.form.get('timezone', 'America/New_York')
+
+            if scheduled_time:
+                # 调度定时任务
+                result = job_scheduler.schedule_one_off_tweet(custom_content, scheduled_time, media_files, timezone)
+            else:
+                # 立即执行发推
+                result = job_scheduler.manual_tweet(custom_content, media_files=media_files)
             
-            # 清理临时文件
-            for file_path in media_files:
-                try:
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                        logger.info(f"清理临时文件: {file_path}")
-                except Exception as e:
-                    logger.error(f"清理临时文件失败 {file_path}: {e}")
+            # 清理临时文件 (仅当不是定时任务时清理，或者需要移动文件到持久存储)
+            # 注意：如果是定时任务，文件需要保留直到发送。这里简化处理，假设定时任务时间很短，
+            # 或者我们需要将文件移动到非临时目录。
+            # 为了支持定时发送，我们将文件保留在 tmp 目录，由定时任务执行完后清理（需要修改 manual_tweet）
+            # 或者这里不清理，由系统定期清理 tmp
+            
+            # 暂时策略：如果是立即发送，则清理；如果是定时发送，暂不清理
+            if not scheduled_time:
+                for file_path in media_files:
+                    try:
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                            logger.info(f"清理临时文件: {file_path}")
+                    except Exception as e:
+                        logger.error(f"清理临时文件失败 {file_path}: {e}")
                     
         else:
             # 处理 JSON 请求
             data = request.get_json() or {}
             custom_content = data.get('content')
+            scheduled_time = data.get('scheduled_time')
+            timezone = data.get('timezone', 'America/New_York')
             
-            # 执行发推
-            result = job_scheduler.manual_tweet(custom_content)
+            if scheduled_time:
+                result = job_scheduler.schedule_one_off_tweet(custom_content, scheduled_time, None, timezone)
+            else:
+                result = job_scheduler.manual_tweet(custom_content)
         
         if result.get('success'):
             return jsonify({
