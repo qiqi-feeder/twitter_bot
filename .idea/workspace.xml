@@ -4,7 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="23091844-06b2-4fed-88ca-14d8c931d89e" name="Changes" comment="" />
+    <list default="true" id="23091844-06b2-4fed-88ca-14d8c931d89e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/config.example.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.example.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/market.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/market.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/recap_output.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/recap_output.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/recaps/recap_2025-11-20.json" beforeDir="false" afterPath="$PROJECT_DIR$/data/recaps/recap_2025-11-20.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/recaps/recap_2025-11-20.txt" beforeDir="false" afterPath="$PROJECT_DIR$/data/recaps/recap_2025-11-20.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_sources/fetch_real_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/data_sources/fetch_real_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prompt/system_prompt.md" beforeDir="false" afterPath="$PROJECT_DIR$/prompt/system_prompt.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tools/test_recap_with_prompt.py" beforeDir="false" afterPath="$PROJECT_DIR$/tools/test_recap_with_prompt.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -32,6 +43,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Python.fetch_real_data.executor": "Run",
     "Python.post_demo.executor": "Run",
     "Python.test.executor": "Run",
     "Python.test2.executor": "Run",
@@ -39,10 +51,32 @@
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "D:/workspace/twitter_bot"
+    "last_opened_file_path": "D:/workspace/Twitter_Bot"
   }
 }]]></component>
-  <component name="RunManager" selected="Python.test">
+  <component name="RunManager" selected="Python.fetch_real_data">
+    <configuration name="fetch_real_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Twitter_Bot" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/data_sources" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/data_sources/fetch_real_data.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="twitter_bot" />
       <option name="ENV_FILES" value="" />
@@ -89,6 +123,7 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.fetch_real_data" />
         <item itemvalue="Python.test" />
         <item itemvalue="Python.test2" />
       </list>

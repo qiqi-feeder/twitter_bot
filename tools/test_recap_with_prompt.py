@@ -48,8 +48,11 @@ def fetch_market_data():
         if 'price' in data:
             btc = data['price'].get('btc', {})
             eth = data['price'].get('eth', {})
+            okb = data['price'].get('okb', {})
             logger.info(f"  BTC: ${btc.get('price')} ({btc.get('change'):+.2f}%)")
             logger.info(f"  ETH: ${eth.get('price')} ({eth.get('change'):+.2f}%)")
+            if okb.get('price') is not None and okb.get('change') is not None:
+                logger.info(f"  OKB: ${okb.get('price')} ({okb.get('change'):+.2f}%)")
         
         if 'global' in data:
             global_data = data['global']
@@ -80,6 +83,7 @@ def build_user_prompt(market_data):
     if 'price' in market_data:
         btc = market_data['price'].get('btc', {})
         eth = market_data['price'].get('eth', {})
+        okb = market_data['price'].get('okb', {})
 
         btc_price = btc.get('price')
         btc_change = btc.get('change')
@@ -87,6 +91,9 @@ def build_user_prompt(market_data):
         eth_price = eth.get('price')
         eth_change = eth.get('change')
         eth_volume = eth.get('volume')
+        okb_price = okb.get('price')
+        okb_change = okb.get('change')
+        okb_volume = okb.get('volume')
 
         if btc_price is not None:
             user_prompt += f"\n- BTC 价格: ${btc_price:,.2f}"
@@ -103,6 +110,13 @@ def build_user_prompt(market_data):
             user_prompt += f"\n- ETH 24h 涨跌: {eth_change:+.2f}%"
         if eth_volume is not None:
             user_prompt += f"\n- ETH 24h 交易量: ${eth_volume:,.0f}"
+
+        if okb_price is not None:
+            user_prompt += f"\n- OKB 价格: ${okb_price:,.2f}"
+        if okb_change is not None:
+            user_prompt += f"\n- OKB 24h 涨跌: {okb_change:+.2f}%"
+        if okb_volume is not None:
+            user_prompt += f"\n- OKB 24h 交易量: ${okb_volume:,.0f}"
 
     if 'global' in market_data:
         global_data = market_data['global']
@@ -162,28 +176,106 @@ def build_user_prompt(market_data):
         macro = market_data['macro']
         # 只有在有实际数据时才添加宏观板块（非 0 值）
         has_macro_data = any(
-            macro.get(key) and macro.get(key) != 0
+            macro.get(key) and isinstance(macro.get(key), dict) and macro[key].get('value', 0) != 0
             for key in ['nasdaq', 'dxy', 'vix', 'us10y', 'gold', 'oil']
         )
 
         if has_macro_data:
             user_prompt += "\n\n### 宏观市场"
-            if macro.get('nasdaq'):
-                user_prompt += f"\n- 纳斯达克: {macro['nasdaq']:+.2f}%"
-            if macro.get('dxy'):
-                user_prompt += f"\n- 美元指数 (DXY): {macro['dxy']:.2f}"
-            if macro.get('vix'):
-                user_prompt += f"\n- VIX 恐慌指数: {macro['vix']:.2f}"
-            if macro.get('us10y'):
-                user_prompt += f"\n- 10年美债收益率: {macro['us10y']:.2f}%"
-            if macro.get('gold'):
-                user_prompt += f"\n- 黄金: {macro['gold']:+.2f}%"
-            if macro.get('oil'):
-                user_prompt += f"\n- 原油: {macro['oil']:+.2f}%"
+
+            nasdaq = macro.get('nasdaq', {})
+            if isinstance(nasdaq, dict) and nasdaq.get('value'):
+                user_prompt += f"\n- 纳斯达克: {nasdaq['value']:,.2f} ({nasdaq.get('change', 0):+.2f}%)"
+
+            dxy = macro.get('dxy', {})
+            if isinstance(dxy, dict) and dxy.get('value'):
+                user_prompt += f"\n- 美元指数 (DXY): {dxy['value']:.2f} ({dxy.get('change', 0):+.2f}%)"
+
+            vix = macro.get('vix', {})
+            if isinstance(vix, dict) and vix.get('value'):
+                user_prompt += f"\n- VIX 恐慌指数: {vix['value']:.2f} ({vix.get('change', 0):+.2f}%)"
+
+            us10y = macro.get('us10y', {})
+            if isinstance(us10y, dict) and us10y.get('value'):
+                user_prompt += f"\n- 10年美债收益率: {us10y['value']:.2f}% ({us10y.get('change', 0):+.2f}%)"
+
+            gold = macro.get('gold', {})
+            if isinstance(gold, dict) and gold.get('value'):
+                user_prompt += f"\n- 黄金: ${gold['value']:,.2f} ({gold.get('change', 0):+.2f}%)"
+
+            oil = macro.get('oil', {})
+            if isinstance(oil, dict) and oil.get('value'):
+                user_prompt += f"\n- 原油: ${oil['value']:.2f} ({oil.get('change', 0):+.2f}%)"
+
+    # X Layer 链上数据（如果有）
+    if 'xlayer' in market_data:
+        xlayer = market_data['xlayer']
+
+        if xlayer.get('tvl', 0) > 0:
+            user_prompt += "\n\n### X Layer 链上数据"
+            user_prompt += f"\n- TVL: ${xlayer['tvl']:,}"
+
+            tvl_change = xlayer.get('tvl_change_24h', 0)
+            if tvl_change != 0:
+                user_prompt += f" ({tvl_change:+.2f}% 24h)"
+
+            dex_volume = xlayer.get('dex_volume_24h', 0)
+            if dex_volume > 0:
+                user_prompt += f"\n- DEX 24h 交易量: ${dex_volume:,}"
+
+            active_addresses = xlayer.get('active_addresses_24h', 0)
+            if active_addresses > 0:
+                user_prompt += f"\n- 24h 活跃地址: {active_addresses:,}"
+
+            transactions = xlayer.get('transactions_24h', 0)
+            if transactions > 0:
+                user_prompt += f"\n- 24h 交易数: {transactions:,}"
+
+            # 资金流向数据
+            inflow = xlayer.get('inflow', 0)
+            outflow = xlayer.get('outflow', 0)
+            net_inflow = xlayer.get('net_inflow', 0)
+
+            if inflow > 0 or outflow > 0:
+                user_prompt += "\n\n**资金流向（交易所 ↔ 链上）:**"
+
+                if inflow > 0:
+                    inflow_count = xlayer.get('inflow_count', 0)
+                    user_prompt += f"\n- 链上流入（交易所→链上）: ${inflow:,.2f}"
+                    if inflow_count > 0:
+                        user_prompt += f" ({inflow_count} 笔)"
+
+                if outflow > 0:
+                    outflow_count = xlayer.get('outflow_count', 0)
+                    user_prompt += f"\n- 链上流出（链上→交易所）: ${outflow:,.2f}"
+                    if outflow_count > 0:
+                        user_prompt += f" ({outflow_count} 笔)"
+
+                if net_inflow != 0:
+                    user_prompt += f"\n- 净流入: ${net_inflow:,.2f}"
+
+    # 新闻数据（如果有）
+    if 'news' in market_data:
+        news = market_data['news']
+        articles = news.get('articles', [])
+
+        if articles:
+            user_prompt += "\n\n### 今日重要新闻"
+            user_prompt += f"\n（来源: {news.get('provider', 'Unknown')}）\n"
+
+            for i, article in enumerate(articles[:5], 1):
+                title = article.get('title', 'No title')
+                source = article.get('source', 'Unknown')
+                url = article.get('url', '')
+
+                user_prompt += f"\n{i}. **{title}**"
+                user_prompt += f"\n   来源: {source}"
+                if url:
+                    user_prompt += f"\n   链接: {url}"
 
     user_prompt += """
 
-请生成一个包含 4-5 条推文的 Twitter Thread，每条推文不超过 280 字符。
+请根据以上数据生成一篇完整的 Web3 大盘复盘长文。
 """
 
     return user_prompt
@@ -347,4 +439,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

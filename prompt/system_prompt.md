@@ -31,23 +31,14 @@
 | :--- | :--- | :--- |
 | BTC | $Price / Change% | Vol / Fear&Greed |
 | ETH | $Price / Change% | Vol |
+| OKB | $Price / Change% | Vol |
 | 全市场 | Cap / Change% | BTC Dom ±% |
 | 爆仓 | Amount (24h) | L/S Ratio |
 [cite_start][cite: 10, 11]
 
-**5. 重点币种解析 (Key Coins)**
-挑 3-5 个重点：
-- [cite_start]**BTC**: 关注关键位、CME 缺口、ETF 流入流出、矿工动向。[cite: 13]
-- [cite_start]**ETH**: 关注 Gas、销毁、L2 TVL、质押率。[cite: 14]
-- [cite_start]**今日最亮眼**: 讲上涨逻辑。[cite: 15]
-- [cite_start]**今日最惨**: 讲下跌原因。[cite: 16]
-
-**6. X Layer 链上数据 (On-Chain)**
-- [cite_start]重点关注 X Layer (OKX) 或主流链上的资金流入流出及核心指标。[cite: 17, 18]
-
-**7. 市场重磅新闻 (Top News)**
+**5. 市场重磅新闻 (Top News)**
 列出 1-3 条最重要的事件，按重要性排序。
 [cite_start]格式：① 事件内容 → 简短影响分析（利好/利空/长期叙事）。[cite: 20]
 
-**8. 明日关注 (Outlook)**
+**6. 明日关注 (Outlook)**
 [cite_start]列出明天发生的重要数据公布或事件排期。[cite: 21, 22]

@@ -51,7 +51,7 @@ class ConfigLoader:
                     local_config = yaml.safe_load(file)
                     # 深度合并配置
                     self._merge_config(self._config, local_config)
-                    print(f"✅ 已加载本地配置: {local_config_path}")
+                    print(f"已加载本地配置: {local_config_path}")
 
             return self._config
         except yaml.YAMLError as e:
