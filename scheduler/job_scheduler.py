@@ -15,6 +15,7 @@ from pytz import timezone as pytz_timezone
 import uuid
 from utils.config_loader import config_loader
 from utils.logger import logger
+import pytz
 
 
 class JobScheduler:
@@ -37,6 +38,30 @@ class JobScheduler:
 
         logger.info(f"调度器初始化完成，时区: {timezone_str}")
 
+    def setup_crypto_hot_job(self):
+        """
+        中国时区：每天 00:00 / 08:00 / 16:00
+        """
+        from get_data.main import run_once
+
+        tz = pytz.timezone("Asia/Shanghai")
+
+        trigger = CronTrigger(
+            hour="0,8,16",
+            minute=0,
+            timezone=tz
+        )
+
+        self.scheduler.add_job(
+            func=run_once,
+            trigger=trigger,
+            id="crypto_hot_auto_tweet",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True
+        )
+
+        logger.info("已注册【中国时区】8 小时热点自动推文任务")
     def _setup_jobs(self):
         """设置定时任务"""
         tweet_times = self.scheduler_config.get('tweet_times', ['08:00'])

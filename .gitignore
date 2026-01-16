@@ -145,3 +145,5 @@ data/recaps/*.txt
 # IDE 文件
 .idea/
 .vscode/
+my_local_model/
+crypto_db/

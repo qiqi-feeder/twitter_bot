@@ -1,11 +1,12 @@
 import requests
 import os
-
+from pathlib import Path
 def test_media_upload():
+    BASE_DIR = Path(__file__).resolve().parent.parent
     url = 'http://localhost:5000/tweet/post'
     
     # Use existing test image
-    image_path = 'assets/test_tesla.jpg'
+    image_path = BASE_DIR / 'assets' / 'test.jpg'
     print(f"✅ Using test image: {image_path}")
     
     # Open the file for uploading

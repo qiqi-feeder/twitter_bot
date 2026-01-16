@@ -2,13 +2,15 @@
 Twitter 自动发推系统主入口
 基于 Flask 框架，提供 Web API 和定时任务功能
 """
-
+import threading
+from get_data.main import run_once  #
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import signal
 import sys
 import os
 import time
+import pytz
 
 # 添加项目根目录到 Python 路径
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -43,7 +45,7 @@ app = create_app()
 @app.before_request
 def require_login():
     # 允许访问的端点
-    allowed_endpoints = ['login', 'static', 'status']
+    allowed_endpoints = ['login', 'static', 'status','post_tweet','manual_run_once','run_bot']
     if request.endpoint in allowed_endpoints:
         return
 
@@ -141,8 +143,6 @@ def compose_page():
     """发推页面"""
     from flask import render_template
     return render_template('compose.html')
-
-
 @app.route('/tweet/post', methods=['POST'])
 def post_tweet():
     """发布推文（支持立即发送和定时发送）"""
@@ -150,35 +150,54 @@ def post_tweet():
         # 处理 multipart/form-data
         content = request.form.get('content')
         scheduled_time = request.form.get('scheduled_time')
-        timezone = request.form.get('timezone', 'America/New_York')
-        
+        tz = request.form.get('timezone', 'America/New_York')
+
+        if not content or not content.strip():
+            return jsonify({
+                'success': False,
+                'message': '内容不能为空'
+            }), 400
+
         # 保存上传的图片
         media_files = []
         if 'images' in request.files:
             files = request.files.getlist('images')
-            # 确保上传目录存在
             upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
             if not os.path.exists(upload_dir):
                 os.makedirs(upload_dir)
-                
+
             for file in files:
                 if file and file.filename:
                     filename = secure_filename(file.filename)
-                    # 添加时间戳防止重名
-                    filename = f"{int(time.time())}_{filename}"
+                    filename = f"{int(time.time())}_{filename}"  # 防重名
                     file_path = os.path.join(upload_dir, filename)
                     file.save(file_path)
                     media_files.append(file_path)
                     logger.info(f"已保存上传图片: {file_path}")
 
-        if scheduled_time:
-            result = job_scheduler.schedule_one_off_tweet(content, scheduled_time, media_files, timezone)
-        else:
-            result = job_scheduler.manual_tweet(content, media_files)
-            
-        # 注意：不再自动清理图片，以便在历史记录中查看
-        # 实际生产环境中可能需要一个定期清理任务
-        
+        # 发送推文
+        try:
+            if scheduled_time:
+                result = job_scheduler.schedule_one_off_tweet(content, scheduled_time, media_files, tz)
+            else:
+                result = job_scheduler.manual_tweet(content, media_files)
+        except Exception as e:
+            logger.error(f"推文发送失败（job_scheduler）: {e}")
+            return jsonify({
+                'success': False,
+                'message': '发送失败',
+                'error': str(e)
+            }), 500
+
+        # 确保 result 是 dict，并有 success 字段
+        if not isinstance(result, dict):
+            logger.error(f"job_scheduler 返回异常: {result}")
+            return jsonify({
+                'success': False,
+                'message': '发送失败',
+                'error': 'job_scheduler 返回非 dict 类型'
+            }), 500
+
         if result.get('success'):
             return jsonify({
                 'success': True,
@@ -188,7 +207,7 @@ def post_tweet():
         else:
             return jsonify({
                 'success': False,
-                'message': '发送失败',
+                'message': result.get('message', '发送失败'),
                 'error': result.get('error')
             }), 400
 
@@ -199,6 +218,64 @@ def post_tweet():
             'message': '系统错误',
             'error': str(e)
         }), 500
+
+
+# @app.route('/tweet/post', methods=['POST'])
+# def post_tweet():
+#     """发布推文（支持立即发送和定时发送）"""
+#     try:
+#         # 处理 multipart/form-data
+#         content = request.form.get('content')
+#         scheduled_time = request.form.get('scheduled_time')
+#         timezone = request.form.get('timezone', 'America/New_York')
+        
+#         # 保存上传的图片
+#         media_files = []
+#         if 'images' in request.files:
+#             files = request.files.getlist('images')
+#             # 确保上传目录存在
+#             upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+#             if not os.path.exists(upload_dir):
+#                 os.makedirs(upload_dir)
+                
+#             for file in files:
+#                 if file and file.filename:
+#                     filename = secure_filename(file.filename)
+#                     # 添加时间戳防止重名
+#                     filename = f"{int(time.time())}_{filename}"
+#                     file_path = os.path.join(upload_dir, filename)
+#                     file.save(file_path)
+#                     media_files.append(file_path)
+#                     logger.info(f"已保存上传图片: {file_path}")
+
+#         if scheduled_time:
+#             result = job_scheduler.schedule_one_off_tweet(content, scheduled_time, media_files, timezone)
+#         else:
+#             result = job_scheduler.manual_tweet(content, media_files)
+            
+#         # 注意：不再自动清理图片，以便在历史记录中查看
+#         # 实际生产环境中可能需要一个定期清理任务
+        
+#         if result.get('success'):
+#             return jsonify({
+#                 'success': True,
+#                 'message': '推文发送成功' if not scheduled_time else result.get('message'),
+#                 'data': result
+#             })
+#         else:
+#             return jsonify({
+#                 'success': False,
+#                 'message': '发送失败',
+#                 'error': result.get('error')
+#             }), 400
+
+#     except Exception as e:
+#         logger.error(f"处理发推请求失败: {e}")
+#         return jsonify({
+#             'success': False,
+#             'message': '系统错误',
+#             'error': str(e)
+#         }), 500
 
 
 @app.route('/api/history', methods=['GET'])
@@ -481,6 +558,39 @@ def signal_handler(signum, frame):
     logger.info("系统已关闭")
     sys.exit(0)
 
+@app.route('/tweet/run-bot', methods=['POST'])
+def run_bot():
+    """
+    手动触发自动推文流程（获取 Telegram → ChromaDB → 聚类 → 发推）
+    """
+    try:
+        # 用线程运行，避免阻塞 Flask
+        threading.Thread(target=run_once).start()
+        return jsonify({
+            'success': True,
+            'message': '自动推文任务已启动'
+        })
+    except Exception as e:
+        logger.error(f"触发自动推文失败: {e}")
+        return jsonify({
+            'success': False,
+            'message': '触发自动推文失败',
+            'error': str(e)
+        }), 500
+
+@app.route("/tweet/run-once", methods=["POST"])
+def manual_run_once():
+    try:
+        run_once()
+        return jsonify({
+            "success": True,
+            "msg": "已手动触发完整发推流程"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 
@@ -538,6 +648,8 @@ def initialize_system():
 
     # 启动调度器
     job_scheduler.start()
+    # 初始化系统里加
+    job_scheduler.setup_crypto_hot_job()
 
     logger.info("系统初始化完成")
     return True

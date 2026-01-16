@@ -31,7 +31,7 @@ openai:
   provider: grok
 proxy:
   enabled: true
-  socks5_url: socks5://032bd1fc:59138690@us468.kookeey.info:20146
+  socks5_url: socks5://032bd1fc:59138690@us25.kookeey.info:22448
 scheduler:
   fixed_content: 'Good morning! 🌅 Have a great day! #DailyGreeting'
   timezone: America/New_York
@@ -39,12 +39,12 @@ scheduler:
   - 08:00
   tweets_per_day: 1
 twitter:
-  access_token: bTRXUmJtQ2YwRjJ5RGFJOVltUnhyZ1kyVnk1RmVEaFk3RTNtYjhPSHd4M003OjE3NjM4NDc0NTc5MDk6MToxOmF0OjE
+  access_token: SWFNd0xkWXNjN1VmXzViUWdmYmk5Q1hIVVVxaWhKMjgxZlR0ajFBT2JncUJ6OjE3Njg0ODIwMDEyNjM6MTowOmF0OjE
   access_token_secret: your_access_token_secret_here
   bearer_token: your_bearer_token_here
   client_id: ZXNOR2FOcW1yQ0NOSUEwZ2F4RG86MTpjaQ
   client_secret: dqNFn-c0i7Cbjuq5-pnVJOlTdW8jWnKaluge-aWWAanU-ZUaky
   consumer_key: your_consumer_key_here
   consumer_secret: your_consumer_secret_here
-  refresh_token: UnBDZUdpbF9qLVZkOC1nRnM5ejdyWFl6dGE2eHFBbzVEdF9md29KVzhJazJ6OjE3NjM4NDc0NTc5MDk6MToxOnJ0OjE
-  token_expires_at: '2025-11-23T07:37:38.063910'
+  refresh_token: MFJUdUJwbFAwRW9zcUFldGxPcC1CMU5HZll6cmxnSExCMGdQVXFTVEdLSGZiOjE3Njg0ODIwMDEyNjM6MToxOnJ0OjE
+  token_expires_at: '2026-01-15T15:00:01.326289'
