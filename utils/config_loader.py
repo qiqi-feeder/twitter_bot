@@ -114,6 +114,36 @@ class ConfigLoader:
         config = self.get_config()
         return config.get('logging', {})
 
+    def update_twitter_config(self, key: str, value: Any) -> bool:
+        """更新 Twitter 配置到本地配置文件"""
+        try:
+            local_config_path = self.config_path.replace('.yaml', '.local.yaml')
+            
+            # 读取现有本地配置
+            if os.path.exists(local_config_path):
+                with open(local_config_path, 'r', encoding='utf-8') as f:
+                    local_config = yaml.safe_load(f) or {}
+            else:
+                local_config = {}
+            
+            # 确保 twitter 部分存在
+            if 'twitter' not in local_config:
+                local_config['twitter'] = {}
+                
+            # 更新值
+            local_config['twitter'][key] = value
+            
+            # 写回文件
+            with open(local_config_path, 'w', encoding='utf-8') as f:
+                yaml.dump(local_config, f, allow_unicode=True, default_flow_style=False)
+                
+            # 重新加载内存配置
+            self.load_config()
+            return True
+        except Exception as e:
+            print(f"更新配置失败: {e}")
+            return False
+
 
 # 全局配置加载器实例
 config_loader = ConfigLoader()

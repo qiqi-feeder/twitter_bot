@@ -22,6 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyList = document.getElementById('historyList');
     const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
 
+    // Settings Elements
+    const autoPostToggle = document.getElementById('autoPostToggle');
+
     let confirmedScheduleTime = null;
 
     // --- Theme Switcher ---
@@ -29,12 +32,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initial Load ---
     loadHistory();
+    loadSettings();
 
     refreshHistoryBtn.addEventListener('click', () => {
         refreshHistoryBtn.classList.add('fa-spin');
         loadHistory().finally(() => {
             setTimeout(() => refreshHistoryBtn.classList.remove('fa-spin'), 500);
         });
+    });
+
+    // --- Settings Logic ---
+    async function loadSettings() {
+        try {
+            const response = await fetch('/api/settings');
+            const result = await response.json();
+            if (result.success) {
+                autoPostToggle.checked = result.data.enable_auto_post;
+            }
+        } catch (error) {
+            console.error('Error loading settings:', error);
+        }
+    }
+
+    autoPostToggle.addEventListener('change', async () => {
+        const enabled = autoPostToggle.checked;
+        try {
+            const response = await fetch('/api/settings/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    enable_auto_post: enabled
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast(result.message || 'Settings saved', false);
+            } else {
+                showToast(result.message || 'Failed to save settings', true);
+                // Revert toggle if failed
+                autoPostToggle.checked = !enabled;
+            }
+        } catch (error) {
+            console.error('Error updating settings:', error);
+            showToast('Network error', true);
+            autoPostToggle.checked = !enabled;
+        }
     });
 
     // --- History Logic ---
@@ -111,7 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <div class="history-item">
                     <div class="history-item-header">
-                        <span class="status-badge ${statusClass}">${statusIcon}</span>
+                        <div>
+                            <span class="status-badge ${statusClass}">${statusIcon}</span>
+                            ${item.source ? `<span class="status-badge" style="background: ${item.source === 'auto' ? '#1d9bf0' : '#71767b'}; color: white;">${item.source === 'auto' ? 'Auto' : 'Manual'}</span>` : ''}
+                            ${item.mode ? `<span class="status-badge" style="background: ${item.mode === 'test' ? '#f4ae41' : '#00ba7c'}; color: white;">${item.mode === 'test' ? 'Test' : 'Live'}</span>` : ''}
+                        </div>
                         <span class="history-time">${timeStr}</span>
                     </div>
                     <div class="history-content">
@@ -224,8 +272,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update char count (simple approximation)
         // Twitter uses weighted counting, but simple length is fine for MVP
-        const remaining = 280 - length;
-        charCount.textContent = remaining <= 20 ? remaining : '';
+        // Update to 25000 for Twitter Blue support
+        const limit = 25000;
+        const remaining = limit - length;
+
+        // Only show if close to limit or negative
+        if (remaining <= 100 || remaining < 0) {
+            charCount.textContent = remaining;
+        } else {
+            charCount.textContent = '';
+        }
 
         if (remaining < 0) {
             charCount.classList.add('danger');

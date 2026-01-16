@@ -338,6 +338,57 @@ def get_history():
         }), 500
 
 
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """获取当前设置"""
+    try:
+        twitter_config = config_loader.get_twitter_config()
+        return jsonify({
+            'success': True,
+            'data': {
+                'enable_auto_post': twitter_config.get('enable_auto_post', False)
+            }
+        })
+    except Exception as e:
+        logger.error(f"获取设置失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/settings/update', methods=['POST'])
+def update_settings():
+    """更新设置"""
+    try:
+        data = request.get_json() or {}
+        
+        if 'enable_auto_post' in data:
+            success = config_loader.update_twitter_config('enable_auto_post', data['enable_auto_post'])
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': '设置已更新'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': '保存设置失败'
+                }), 500
+                
+        return jsonify({
+            'success': False,
+            'message': '无效的设置项'
+        }), 400
+        
+    except Exception as e:
+        logger.error(f"更新设置失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/tweet/generate', methods=['POST'])
 def generate_tweet():
     """生成推文内容接口"""

@@ -159,7 +159,7 @@ async def update_database():
 # 4. 排序与生成 (8小时版)
 # ==========================================
 
-def get_top_news_item():
+def get_top_news_items(limit=3):
     print("📊 计算权重排名 (最近 8 小时数据)...")
     db_client = chromadb.PersistentClient(path=DB_PATH)
     emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=MODEL_PATH)
@@ -173,7 +173,7 @@ def get_top_news_item():
 
     if not results['ids']:
         print("📭 最近 8 小时无数据。")
-        return None
+        return []
 
     scored_items = []
     for i in range(len(results['ids'])):
@@ -213,22 +213,37 @@ def get_top_news_item():
 
     scored_items.sort(key=lambda x: x["score"], reverse=True)
     if scored_items:
-        top = scored_items[0]
-        print(f"🏆 本时段 Top 1: [{top['category']}] {top['score']:.2f}分")
-        return top
-    return None
+        # 返回前 limit 个
+        top_items = scored_items[:limit]
+        print(f"🏆 本时段 Top {len(top_items)}:")
+        for idx, item in enumerate(top_items, 1):
+            print(f"   {idx}. [{item['category']}] {item['score']:.2f}分")
+        return top_items
+    return []
 
-def generate_tweet_content(news_item):
-    category = news_item['category']
-    text = news_item['text']
+def generate_tweet_content(news_items):
+    # 确保传入的是列表
+    if not isinstance(news_items, list):
+        news_items = [news_items]
+    
+    # 提取所有分类作为标签候选
+    categories = list(set([item['category'].split('、')[0] for item in news_items]))
+    tags = " ".join([f"#{c}" for c in categories[:3]]) # 最多取3个标签
+    
+    # 构建新闻内容摘要
+    news_content = ""
+    for i, item in enumerate(news_items, 1):
+        news_content += f"{i}. [{item['category']}] {item['text'][:200]}...\n"
+
     prompt = (
         f"你是加密货币推特大V，风格犀利、简洁。\n"
-        f"请根据以下高权重（{category}）新闻写一条中文推文：\n"
-        f"1. 必须包含 #{category.split('、')[0]} 标签\n"
-        f"2. 只能用 1-2 个Emoji\n"
-        f"3. 【绝对限制】内容必须控制在 110 个汉字以内！\n"
-        f"4. 不要包含 URL\n\n"
-        f"新闻内容：\n{text}"
+        f"请根据以下 {len(news_items)} 条高权重热门资讯写一条中文推文（Thread）：\n\n"
+        f"{news_content}\n"
+        f"要求：\n"
+        f"1. **综合分析**：不要简单拼接，要找到这些新闻背后的市场情绪或关联。\n"
+        f"2. **标签**：文末包含 {tags} 等标签。\n"
+        f"3. **Emoji**：适当使用 Emoji 增加活力（不限数量）。\n"
+        f"4. **长度**：不受字数限制，以内容质量为主，可以说透问题。\n"
     )
     try:
         r = client_ds.chat.completions.create(
@@ -253,19 +268,74 @@ def post_tweet_direct(text):
     except Exception as e:
         print(f"❌ 异常: {e}")
 
+# 导入配置加载器和历史记录管理器
+import sys
+import uuid
+# 确保项目根目录在 path 中
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
+from utils.config_loader import config_loader
+from history.history_manager import history_manager
+
 def run_once():
     print(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 8小时任务启动...")
+    
+    # 1. 抓取数据
     asyncio.run(update_database())
-    top_news = get_top_news_item()
-    if not top_news: return
-    tweet = generate_tweet_content(top_news)
+    
+    # 2. 生成内容 (Top 3 聚合)
+    top_items = get_top_news_items(limit=3)
+    if not top_items: return
+    
+    # 3. 检查配置
+    config = config_loader.get_config()
+    twitter_config = config.get('twitter', {})
+    enable_auto_post = twitter_config.get('enable_auto_post', False)
+    
+    print(f"\n--- 正在聚合前 {len(top_items)} 条热门资讯 ---")
+    
+    tweet = generate_tweet_content(top_items)
     if not tweet: return
     
-    # 截断
-    if len(tweet) > 130: tweet = tweet[:130] + "..."
+    print("🐦 内容生成完成:\n", tweet)
     
-    print("🐦 内容:\n", tweet)
-    post_tweet_direct(tweet)
+    # 4. 记录历史
+    job_id = f"auto_{int(time.time())}_{str(uuid.uuid4())[:8]}"
+    mode = 'live' if enable_auto_post else 'test'
+    status = 'pending'
+    
+    history_manager.add_record(
+        job_id=job_id,
+        content=tweet,
+        scheduled_time=datetime.now().isoformat(),
+        status=status,
+        source='auto',
+        mode=mode
+    )
+    
+    # 5. 执行发送 (如果启用)
+    if enable_auto_post:
+        print("🚀 自动发送已启用，正在去推特...")
+        try:
+            res = twitter_client.post_tweet(tweet)
+            
+            if isinstance(res, dict) and (res.get("success") or "data" in res):
+                tweet_url = res.get("tweet_url") or res.get("url")
+                print("✅ 发送成功:", tweet_url)
+                history_manager.update_status(job_id, 'sent', tweet_url=tweet_url)
+            else:
+                error_msg = str(res)
+                print("❌ 发送失败:", error_msg)
+                history_manager.update_status(job_id, 'failed', error=error_msg)
+                
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ 发送异常: {e}")
+            history_manager.update_status(job_id, 'failed', error=error_msg)
+    else:
+        print("🛑 自动发送已禁用 (Dry-Run)，仅保存记录。")
+        history_manager.update_status(job_id, 'sent')
 
 if __name__ == "__main__":
     run_once()

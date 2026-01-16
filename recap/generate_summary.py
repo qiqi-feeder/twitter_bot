@@ -142,15 +142,8 @@ class RecapGenerator:
             # 按段落拆分（两个换行符）
             tweets = [t.strip() for t in content.split('\n\n') if t.strip()]
         
-        # 确保每条推文不超过 280 字符
-        processed_tweets = []
-        for tweet in tweets:
-            if len(tweet) <= 280:
-                processed_tweets.append(tweet)
-            else:
-                # 如果超长，尝试截断
-                logger.warning(f"推文过长 ({len(tweet)} 字符)，尝试截断")
-                processed_tweets.append(tweet[:277] + "...")
+        # 移除长度限制，允许发长推文 (Twitter Blue)
+        processed_tweets = tweets
         
         return processed_tweets
 

@@ -41,7 +41,7 @@ class HistoryManager:
         except Exception as e:
             logger.error(f"保存历史记录失败: {e}")
             
-    def add_record(self, job_id: str, content: str, scheduled_time: str, status: str = 'pending', media_files: List[str] = None):
+    def add_record(self, job_id: str, content: str, scheduled_time: str, status: str = 'pending', media_files: List[str] = None, source: str = 'manual', mode: str = 'live'):
         """
         添加一条新记录
         
@@ -51,6 +51,8 @@ class HistoryManager:
             scheduled_time: 计划发送时间 (ISO 格式)
             status: 状态 (pending, sent, failed, cancelled)
             media_files: 媒体文件列表
+            source: 来源 (manual, auto)
+            mode: 模式 (live, test)
         """
         history = self._load_history()
         
@@ -63,12 +65,14 @@ class HistoryManager:
             'media_files': media_files or [],
             'tweet_id': None,
             'tweet_url': None,
-            'error': None
+            'error': None,
+            'source': source,
+            'mode': mode
         }
         
         history.append(record)
         self._save_history(history)
-        logger.info(f"已添加历史记录: {job_id}")
+        logger.info(f"已添加历史记录: {job_id} (Source: {source}, Mode: {mode})")
         
     def update_status(self, job_id: str, status: str, tweet_id: str = None, tweet_url: str = None, error: str = None):
         """

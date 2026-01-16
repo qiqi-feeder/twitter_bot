@@ -13,20 +13,12 @@ openai:
   grok_base_url: https://api.x.ai/v1
   model: grok-4-fast-reasoning
   prompt_template: '请生成一条有趣且有价值的推文，内容应该：
-
-    1. 长度在100-280字符之间
-
-    2. 包含实用信息或有趣观点
-
-    3. 适合在Twitter上分享
-
-    4. 语言风格轻松友好
-
-
+    1. 不受字符长度限制，以内容质量为核心
+    2. 包含实用信息、深度分析或有趣观点
+    3. 适合在Twitter上分享，排版美观
+    4. 语言风格轻松友好，引人入胜
     主题可以是：技术、生活感悟、学习心得、行业观察等。
-
     请直接返回推文内容，不要包含其他说明文字。
-
     '
   provider: grok
 proxy:
@@ -39,6 +31,7 @@ scheduler:
   - 08:00
   tweets_per_day: 1
 twitter:
+  enable_auto_post: true
   access_token: SWFNd0xkWXNjN1VmXzViUWdmYmk5Q1hIVVVxaWhKMjgxZlR0ajFBT2JncUJ6OjE3Njg0ODIwMDEyNjM6MTowOmF0OjE
   access_token_secret: your_access_token_secret_here
   bearer_token: your_bearer_token_here

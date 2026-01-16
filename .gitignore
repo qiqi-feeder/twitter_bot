@@ -147,3 +147,7 @@ data/recaps/*.txt
 .vscode/
 my_local_model/
 crypto_db/
+
+# Telethon session
+*.session
+*.session-journal
