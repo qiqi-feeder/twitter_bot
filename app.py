@@ -697,10 +697,11 @@ def initialize_system():
     else:
         logger.info("每日大盘复盘未启用")
 
-    # 启动调度器
-    job_scheduler.start()
     # 初始化系统里加
     job_scheduler.setup_crypto_hot_job()
+    
+    # 启动调度器
+    job_scheduler.start()
 
     logger.info("系统初始化完成")
     return True

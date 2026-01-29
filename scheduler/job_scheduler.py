@@ -33,8 +33,8 @@ class JobScheduler:
         # 创建 APScheduler 调度器
         self.scheduler = BackgroundScheduler(timezone=self.timezone)
 
-        # 设置定时任务
-        self._setup_jobs()
+        # 设置定时任务 (已禁用默认闲聊任务)
+        # self._setup_jobs()
 
         logger.info(f"调度器初始化完成，时区: {timezone_str}")
 
@@ -47,7 +47,7 @@ class JobScheduler:
         tz = pytz.timezone("Asia/Shanghai")
 
         trigger = CronTrigger(
-            hour="0,8,16",
+            hour="8,20",
             minute=0,
             timezone=tz
         )
@@ -61,7 +61,7 @@ class JobScheduler:
             coalesce=True
         )
 
-        logger.info("已注册【中国时区】8 小时热点自动推文任务")
+        logger.info("已注册【中国时区】08:00 / 20:00 币圈早晚报自动推文任务")
     def _setup_jobs(self):
         """设置定时任务"""
         tweet_times = self.scheduler_config.get('tweet_times', ['08:00'])

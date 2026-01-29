@@ -1,7 +1,7 @@
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Optional
 from utils.logger import logger
 
@@ -61,7 +61,7 @@ class HistoryManager:
             'content': content,
             'scheduled_time': scheduled_time,
             'status': status,
-            'created_at': datetime.now().isoformat(),
+            'created_at': datetime.now(timezone.utc).isoformat(),
             'media_files': media_files or [],
             'tweet_id': None,
             'tweet_url': None,

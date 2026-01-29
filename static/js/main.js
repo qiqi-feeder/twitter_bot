@@ -135,14 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusIcon = item.status;
             }
 
-            // Format time
+            // Format time (Force Beijing Time)
             const date = new Date(item.created_at);
-            const timeStr = date.toLocaleString();
+            const timeStr = date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
 
             let scheduledInfo = '';
             if (item.scheduled_time && item.status === 'pending') {
                 const scheduledDate = new Date(item.scheduled_time);
-                scheduledInfo = `<div style="font-size: 12px; color: var(--primary-color); margin-top: 4px;">Scheduled for: ${scheduledDate.toLocaleString()}</div>`;
+                const scheduledStr = scheduledDate.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false });
+                scheduledInfo = `<div style="font-size: 12px; color: var(--primary-color); margin-top: 4px;">Scheduled for: ${scheduledStr} (Beijing Time)</div>`;
             }
 
             let mediaPreview = '';
