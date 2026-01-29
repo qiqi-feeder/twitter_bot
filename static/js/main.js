@@ -160,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="status-badge ${statusClass}">${statusIcon}</span>
                             ${item.source ? `<span class="status-badge" style="background: ${item.source === 'auto' ? '#1d9bf0' : '#71767b'}; color: white;">${item.source === 'auto' ? 'Auto' : 'Manual'}</span>` : ''}
                             ${item.mode ? `<span class="status-badge" style="background: ${item.mode === 'test' ? '#f4ae41' : '#00ba7c'}; color: white;">${item.mode === 'test' ? 'Test' : 'Live'}</span>` : ''}
+                            ${item.content_type === 'article' ? `<span class="status-badge" style="background: #e0245e; color: white;">📄 Article</span>` : `<span class="status-badge" style="background: #1d9bf0; color: white;">🐦 Tweet</span>`}
                         </div>
                         <span class="history-time">${timeStr}</span>
                     </div>

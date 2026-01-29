@@ -123,9 +123,9 @@ def deepseek_fuse_event(base_text, other_texts):
         return base_text # Fallback to base text
 
 async def fetch_rank_fuse():
-    # 1. Fetch
-    cutoff_date = datetime.now(timezone.utc) - timedelta(hours=24)
-    print(f"🕒 Fetching messages since: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    # 1. Fetch (Modified to 12 Hours as requested)
+    cutoff_date = datetime.now(timezone.utc) - timedelta(hours=12)
+    print(f"🕒 Fetching messages since: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S UTC')} (12h window)")
 
     client = TelegramClient(SESSION_PATH, TG_API_ID, TG_API_HASH, proxy=TG_PROXY)
     await client.start()

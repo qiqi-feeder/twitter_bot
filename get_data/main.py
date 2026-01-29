@@ -88,9 +88,9 @@ SECTION_MAP = {
     "政府": "━━ 一、精选头条 ━━",
     "金融": "━━ 一、精选头条 ━━",
     "交易所": "━━ 二、项目动态 ━━",
-    "链上": "━━ 二、项目动态 ━━",
     "媒体": "━━ 三、市场观察 ━━",
-    "其他": "━━ 三、市场观察 ━━"
+    "其他": "━━ 三、市场观察 ━━",
+    "链上": "━━ 四、链上侦探 ━━"
 }
 
 def get_base_score(category_name):
@@ -106,7 +106,7 @@ def get_base_score(category_name):
 def deepseek_classify(text):
     prompt = f"""你是一个加密货币新闻分类专家。请根据内容，仅从以下五个关键词中选出一个返回：
     - '媒体' (据消息称、报道称)
-    - '链上' (数据显示、资金流入)
+    - '链上' (数据显示、资金流入、巨鲸、地址转移、监测)
     - '交易所' (官方宣布、项目方、上币公告)
     - '金融' (某公司、银行、ETF机构)
     - '政府' (监管机构、SEC、胜诉、政策)
@@ -314,6 +314,11 @@ Task: Rewrite the input text into a concise news item based on its section.
 - **Focus**: Price action, security alerts, or market sentiment.
 - **Title**: Topic + Key Data/Event
 
+## 4. Section: ━━ 四、链上侦探 ━━
+- **Style**: Analytical, Data-Heavy.
+- **Focus**: Whale addresses, fund movements, liquidation levels.
+- **Title**: Subject (Whale/Inst.) + Action (Deposited/Withdrew) + Amount
+
 # General Constraints
 - **Language**: Simplified Chinese.
 - **No Fluff**: Delete phrases like "It is worth noting", "According to reports".
@@ -346,7 +351,10 @@ import random
 # ==========================================
 # 5. 组装早报 (按配额)
 # ==========================================
-def assemble_daily_briefing(events, title_prefix="币圈早报"):
+# ==========================================
+# 5. 组装早报 (按配额)
+# ==========================================
+def assemble_daily_briefing(events, title_prefix="币圈早报", quotas=None):
     print(f"📝 Assembling {title_prefix} from {len(events)} candidates...")
     
     # 1. Bucket events by Section
@@ -354,7 +362,8 @@ def assemble_daily_briefing(events, title_prefix="币圈早报"):
     section_buckets = {
         "━━ 一、精选头条 ━━": [],
         "━━ 二、项目动态 ━━": [],
-        "━━ 三、市场观察 ━━": []
+        "━━ 三、市场观察 ━━": [],
+        "━━ 四、链上侦探 ━━": []
     }
     
     # 2. Distribute (High Score First)
@@ -363,24 +372,26 @@ def assemble_daily_briefing(events, title_prefix="币圈早报"):
         target_section = SECTION_MAP.get(category, "━━ 三、市场观察 ━━")
         section_buckets[target_section].append(evt)
         
-    # 3. Apply Quotas (Soft Limits)
-    # Target: Headlines~10, Projects~5, Market~3
-    quotas = {
-        "━━ 一、精选头条 ━━": 10,
-        "━━ 二、项目动态 ━━": 5,
-        "━━ 三、市场观察 ━━": 3
-    }
+    # 3. Apply Quotas (Defaults or Custom)
+    if quotas is None:
+        # Default for Tweet (Short)
+        quotas = {
+            "━━ 一、精选头条 ━━": 8,
+            "━━ 二、项目动态 ━━": 4,
+            "━━ 三、市场观察 ━━": 3,
+            "━━ 四、链上侦探 ━━": 3
+        }
     
     # Use Dynamic Title
     current_time_str = datetime.now(CN_TZ).strftime('%Y/%m/%d %H:%M')
     final_text = f"Crypto Market Aggregator | {title_prefix} [{current_time_str}]\n\n"
     
     # 4. Generate Text
-    order = ["━━ 一、精选头条 ━━", "━━ 二、项目动态 ━━", "━━ 三、市场观察 ━━"]
+    order = ["━━ 一、精选头条 ━━", "━━ 二、项目动态 ━━", "━━ 三、市场观察 ━━", "━━ 四、链上侦探 ━━"]
     
     for section_name in order:
         candidates = section_buckets[section_name]
-        limit = quotas.get(section_name, 5)
+        limit = quotas.get(section_name, 999) # Default to high if not specified in custom quotas
         
         # Select Top N by Score first
         selected_items = candidates[:limit]
@@ -406,6 +417,43 @@ def assemble_daily_briefing(events, title_prefix="币圈早报"):
             section_index += 1
             
     return final_text
+
+async def generate_article_content(hours=12):
+    """
+    Generates a long-form article with top 60 events.
+    """
+    print("📰 Generating Long-form Article Content...")
+    
+    # 1. Pipeline Execution (Top 60)
+    limit = 60
+    top_events = await fetch_rank_fuse_pipeline(limit=limit, hours=hours)
+    
+    if not top_events:
+        return None, "No events"
+
+    # 2. Determine Title
+    now_cn = datetime.now(CN_TZ)
+    if now_cn.hour < 12:
+        title_prefix = "币圈早报（深度版）"
+    else:
+        title_prefix = "币圈晚报（深度版）"
+        
+    # 3. Assemble with Larger Quotas
+    # Set high limits to ensure ALL 60 items are used, regardless of category distribution
+    article_quotas = {
+        "━━ 一、精选头条 ━━": 100,
+        "━━ 二、项目动态 ━━": 100,
+        "━━ 三、市场观察 ━━": 100,
+        "━━ 四、链上侦探 ━━": 100
+    }
+    
+    briefing_text = assemble_daily_briefing(top_events, title_prefix=title_prefix, quotas=article_quotas)
+    
+    # Generate a pure Title string for external use
+    date_str = now_cn.strftime('%Y/%m/%d')
+    full_title = f"{title_prefix} - {date_str}"
+    
+    return full_title, briefing_text
 
 # ==========================================
 # 6. 主流程

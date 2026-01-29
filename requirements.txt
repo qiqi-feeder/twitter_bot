@@ -10,3 +10,7 @@ pytz==2023.3
 
 # 数据源依赖（可选）
 yfinance>=0.2.28  # 宏观数据（美股、美债、黄金、原油等）
+google-generativeai
+google-genai
+httpx
+Pillow
