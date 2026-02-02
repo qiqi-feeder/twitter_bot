@@ -16,11 +16,11 @@ from google.genai import types
 import google.generativeai as genai_old
 
 try:
-    from .gen_config import GEMINI_TEXT_API_KEY, GEMINI_TEXT_BASE_URL, GEMINI_IMAGE_API_KEY, GEMINI_IMAGE_BASE_URL, ASSETS_DIR
+    from .gen_config import GEMINI_TEXT_API_KEY, GEMINI_TEXT_BASE_URL, GEMINI_IMAGE_API_KEY, GEMINI_IMAGE_BASE_URL, GOOGLE_API_KEY, USE_OFFICIAL_GEMINI, ASSETS_DIR
 except ImportError:
     import sys
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from gen_config import GEMINI_TEXT_API_KEY, GEMINI_TEXT_BASE_URL, GEMINI_IMAGE_API_KEY, GEMINI_IMAGE_BASE_URL, ASSETS_DIR
+    from gen_config import GEMINI_TEXT_API_KEY, GEMINI_TEXT_BASE_URL, GEMINI_IMAGE_API_KEY, GEMINI_IMAGE_BASE_URL, GOOGLE_API_KEY, USE_OFFICIAL_GEMINI, ASSETS_DIR
 
 class ImageFactory:
     """
@@ -30,112 +30,314 @@ class ImageFactory:
     """
 
     def __init__(self):
-        self.text_key = GEMINI_TEXT_API_KEY
-        self.text_base = GEMINI_TEXT_BASE_URL
+        # Check which API to use
+        self.use_official = USE_OFFICIAL_GEMINI
         
-        self.image_key = GEMINI_IMAGE_API_KEY
-        self.image_base = GEMINI_IMAGE_BASE_URL
-        
-        # Configure Text Model (Old SDK or OpenAI compatible?)
-        # Since 'api.aifuwu.icu' is likely an OpenAI-compatible proxy for Gemini, 
-        # using the standard google-generativeai with custom client_options might be tricky if the path isn't standard.
-        # However, let's try to use the NEW SDK for text as well if it supports it?
-        # Or just use the old one with transport overrides.
-        # For safety/simplicity, I will use the NEW SDK for Image (as provided) and Old SDK for Text (standard configure).
-        # IF text_base is set, we try to use it.
-        
-        if self.text_key:
-            # Note: Configure for custom endpoint in old SDK is not always straightforward.
-            # We'll try standard config first. If user provided a URL, maybe they expect OpenAI client?
-            # Let's assume standard Gemini behavior for now, or use OpenAI client for text if needed.
-            # But creating ImageFactory shouldn't crash.
-            pass
+        if self.use_official:
+            # Use official Google API
+            self.official_key = GOOGLE_API_KEY
+            print(f"✨ ImageFactory using Official Google Gemini API")
+        else:
+            # Use third-party proxies
+            self.text_key = GEMINI_TEXT_API_KEY
+            self.text_base = GEMINI_TEXT_BASE_URL
+            self.image_key = GEMINI_IMAGE_API_KEY
+            self.image_base = GEMINI_IMAGE_BASE_URL
+            print(f"⚙️  ImageFactory using Third-party API proxies")
 
-    def _get_visual_concept(self, news_content: str) -> str:
+    def _get_visual_concept(self, news_content: str) -> dict:
         """
-        Uses Gemini (Text) to extract a surreal, monochrome visual concept.
+        Uses Gemini to generate professional cover image prompts (JSON format).
+        Returns dict with 'prompt' and 'negative_prompt' fields.
         """
-        if not self.text_key:
-            print("⚠️ GEMINI_TEXT_API_KEY is missing!")
-            return "Abstract crypto digital network, high contrast monochrome."
-
-        print(f"🧠 Analyzing text using Gemini Pro ({self.text_base})...")
+        if self.use_official:
+            # Use official API
+            if not self.official_key:
+                print("⚠️ GOOGLE_API_KEY is missing!")
+                return self._get_fallback_prompts()
+            
+            print(f"🧠 Generating cover prompts with Official Gemini API...")
+            return self._generate_official_prompts(news_content)
+        else:
+            # Use third-party API (legacy)
+            if not self.text_key:
+                print("⚠️ GEMINI_TEXT_API_KEY is missing!")
+                return self._get_fallback_prompts()
+            
+            print(f"🧠 Analyzing text using Third-party Gemini Pro ({self.text_base})...")
+            return self._generate_legacy_prompts(news_content)
+    
+    def _generate_official_prompts(self, news_content: str) -> dict:
+        """Generate prompts using official Google Gemini API"""
+        import json
         
+        system_instruction = """你是一个"新闻封面图提示词生成器"。
+输入：一段当天日报（可能包含多条新闻摘要、标题、要点）。
+输出：用于图像生成模型的单条英文提示词（prompt），用于生成一张 16:9 高质量黑白封面插画。
+使用场景：用 gemini-3-pro-image-preview 生成封面图。
+强制要求：输出必须只包含两个字段（JSON），不要包含任何解释性文字。
+
+主题提炼与隐喻生成规则：
+
+从日报中选择"最适合画成封面"的 1 个主题（优先：宏观趋势/科技/社会心理/经济变化/安全/注意力与信息过载；回避：血腥事故现场、未成年人、极端仇恨符号、明确政治宣传）。
+
+把主题转成一个"象征性场景"（allegory）：用 1 个主角 + 1 个核心道具/空间 + 2–4 个外部威胁或对立元素来表现冲突。
+
+场景必须"可读、单幅画讲清楚"，避免拼贴多新闻。
+
+不要让模型在画面中出现可读文字；标题由后处理叠加。
+
+风格（必须严格保持）：
+
+Black-and-white only; high-contrast monochrome.
+
+Intaglio etching / woodcut engraving / Victorian-era book illustration aesthetic.
+
+Dense cross-hatching + stippling; crisp linework; no blur.
+
+Dark humor + surreal symbolism, but not cute/cartoon.
+
+No photorealism, no modern UI screenshots, no gradients.
+
+构图与画面结构（必须严格保持）：
+
+Aspect ratio: 16:9 horizontal cover illustration.
+
+One clear focal point (main subject) slightly left-of-center.
+
+Depth: foreground hint + midground action + background texture.
+
+The entire frame should be highly detailed with dense cross-hatching and intricate linework.
+
+约束/禁止项（必须写进 prompt）：
+
+"NO readable text, NO letters, NO words, NO watermarks, NO logos, NO signatures, NO QR codes."
+
+"No color. No photorealism. No modern brand marks."
+
+Avoid depicting identifiable real persons; use generic silhouettes.
+
+输出格式（必须严格遵守）：
+只输出 JSON：
+
+prompt: 一条英文 prompt（150–280 词），包含：主题隐喻、场景要素、构图要求、风格、禁止项。
+
+negative_prompt: 一条英文 negative prompt（可短），进一步强调禁止项与避免的风格漂移。
+
+不要输出代码块，不要输出多余字段，不要输出解释。
+
+示例输出格式（注意：不要复用示例内容，只复用格式）：
+{
+"prompt": "...",
+"negative_prompt": "..."
+}
+
+现在开始：基于我提供的日报文本生成封面图 prompt。"""
+
+        try:
+            client = genai.Client(api_key=self.official_key)
+            response = client.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=f"{system_instruction}\n\n日报文本：\n<<<\n{news_content[:2000]}\n>>>"
+            )
+            
+            result_text = response.text.strip()
+            
+            # Remove markdown code blocks if present
+            if result_text.startswith("```json"):
+                result_text = result_text[7:]
+            if result_text.startswith("```"):
+                result_text = result_text[3:]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+            result_text = result_text.strip()
+            
+            prompt_data = json.loads(result_text)
+            print(f"✅ Prompts generated: {len(prompt_data.get('prompt', ''))} chars")
+            return prompt_data
+            
+        except json.JSONDecodeError as e:
+            print(f"⚠️ JSON parse failed: {e}, using fallback")
+            return self._get_fallback_prompts()
+        except Exception as e:
+            print(f"❌ Official API error: {e}")
+            return self._get_fallback_prompts()
+    
+    def _generate_legacy_prompts(self, news_content: str) -> dict:
+        """Generate prompts using legacy third-party API"""
         system_instruction = """
         You are an avant-garde Art Director. Your goal is to visualize abstract cryptocurrency news (volatility, regulations, whales) into a **Surreal, Monochrome Concept**.
         **Rules:**
-        1. Use dark, mysterious metaphors (e.g., 'A stone maze floating in a void' for regulation).
+        1. Use dark,mysterious metaphors (e.g., 'A stone maze floating in a void' for regulation).
         2. NO text, NO charts, NO coins.
         3. Keep the description concise and focused on the visual scene.
         """
         
-        prompt = f"{system_instruction}\n\nNews Content:\n{news_content[:2000]}"
-        
-        # Using OpenAI Client for Text Reasoning if the URL is custom (Aifuwu usually mimics OpenAI)
-        # OR using generic requests to be safe.
-        # Let's try requests to the chat/completions endpoint if it follows OpenAI format, 
-        # OR use google.generativeai if it's a real Google proxy.
-        # Given "api.aifuwu.icu" usually serves OpenAI-compatible APIs for various models:
-        
         try:
-            # Attempt using the NEW SDK for text as well?
-            # client = genai.Client(api_key=self.text_key, http_options=types.HttpOptions(base_url=self.text_base))
-            # But the model name might be 'gemini-1.5-pro'
-            
-            # Let's try standard requests to be robust against SDK version issues for the custom proxy.
             headers = {
                 "Authorization": f"Bearer {self.text_key}",
                 "Content-Type": "application/json"
             }
-            # Assuming OpenAI compatible endpoint
-            url = f"{self.text_base}/v1/chat/completions" 
+            url = f"{self.text_base}/v1/chat/completions"
             payload = {
-                "model": "gemini-2.5-pro", # Updated based on user's available model list
+                "model": "gemini-2.5-pro",
                 "messages": [
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": f"News Content:\n{news_content[:2000]}"}
                 ]
             }
             
-            # Fallback if it's actually Google native proxy?
-            # Let's try OpenAI format first as it's common for 3rd party aggregators.
-            
             resp = httpx.post(url, headers=headers, json=payload, timeout=30)
             if resp.status_code == 200:
                 data = resp.json()
-                return data['choices'][0]['message']['content'].strip()
+                concept = data['choices'][0]['message']['content'].strip()
+                
+                # Convert to new format
+                style_suffix = "High-contrast black and white ink illustration. Style of vintage woodcut, etching, and copperplate engraving. Use stippling and cross-hatching. No colors, strictly monochrome. Surreal, intricate details, mysterious atmosphere. Similar to M.C. Escher or Gustave Doré."
+                
+                return {
+                    "prompt": f"{concept}. {style_suffix}",
+                    "negative_prompt": "color, photorealism, text, letters, words, logos, watermarks"
+                }
             
-            # If that failed, maybe it IS a Google native proxy?
-            # Let's try the Old SDK with client_options.
-            # genai_old.configure(api_key=self.text_key, client_options={"api_endpoint": self.text_base})
-            # model = genai_old.GenerativeModel('gemini-1.5-pro')
-            # res = model.generate_content(prompt)
-            # return res.text
-            
-            print(f"⚠️ Text Gen Failed {resp.status_code}: {resp.text}")
+            print(f"⚠️ Legacy API failed {resp.status_code}")
             
         except Exception as e:
-            print(f"❌ Text Gen Error: {e}")
-            
-        return "Surreal black and white digital landscape, abstract financial structures."
+            print(f"❌ Legacy API error: {e}")
+        
+        return self._get_fallback_prompts()
+    
+    def _get_fallback_prompts(self) -> dict:
+        """Return fallback prompts when API fails"""
+        return {
+            "prompt": "A surreal black and white engraving showing abstract cryptocurrency market volatility. Central figure: lone trader silhouette standing before cascading data streams. Dense cross-hatching, Victorian woodcut style. 16:9 horizontal. Entire frame highly detailed. NO text, NO letters, NO logos. High contrast monochrome only.",
+            "negative_prompt": "color, photorealism, text, letters, words, logos, watermarks, signatures, modern UI, cartoon, cute style"
+        }
 
     def _generate_image(self, prompt: str) -> bool:
         """
-        Generates image using the User's Provided Code Snippet (adapted).
+        Generates image using official or third-party API based on configuration.
         """
+        if self.use_official:
+            return self._generate_image_official(prompt)
+        else:
+            return self._generate_image_legacy(prompt)
+    
+    def _generate_image_official(self, prompt: str) -> bool:
+        """Generate image using official Google Gemini API"""
+        if not self.official_key:
+            print("⚠️ GOOGLE_API_KEY is missing!")
+            return False
+        
+        OUT_PATH = Path(ASSETS_DIR) / "cover.jpg"
+        MODEL = "gemini-3-pro-image-preview"  # Official model
+        IMAGE_SIZE = "2K"
+        
+        print(f"🖌️ Generating image with Official API...")
+        print(f"   Model: {MODEL}")
+        print(f"   Prompt: {prompt[:60]}...")
+        
+        try:
+            client = genai.Client(api_key=self.official_key)
+            
+            contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
+            config = types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"],
+                image_config=types.ImageConfig(image_size=IMAGE_SIZE),
+            )
+            
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=contents,
+                config=config
+            )
+            
+            # Extract image bytes
+            image_bytes = None
+            candidates = getattr(response, "candidates", None) or []
+            
+            for cand in candidates:
+                content = getattr(cand, "content", None)
+                if content is None:
+                    continue
+                parts = getattr(content, "parts", None) or []
+                for part in parts:
+                    inline = getattr(part, "inline_data", None)
+                    if inline is not None:
+                        data = getattr(inline, "data", None)
+                        if data and image_bytes is None:
+                            image_bytes = data
+            
+            if not image_bytes:
+                print("   ❌ No image data returned")
+                return False
+            
+            return self._save_and_process_image(image_bytes, OUT_PATH)
+            
+        except Exception as e:
+            print(f"   ❌ Official API Error: {e}")
+            return False
+    
+    def _generate_image_legacy(self, prompt: str) -> bool:
+        """Generate image using third-party API (legacy)"""
         if not self.image_key:
             print("⚠️ GEMINI_IMAGE_API_KEY is missing!")
             return False
 
+    def _save_and_process_image(self, image_bytes: bytes, output_path: Path) -> bool:
+        """Shared method to save and post-process image (16:9 crop + B&W)"""
+        try:
+            from PIL import ImageOps
+            
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Load image
+            img = Image.open(io.BytesIO(image_bytes))
+            
+            # 1. Convert to grayscale (black & white)
+            img_bw = img.convert('L')
+            
+            # 2. Enhance contrast for better B&W effect
+            img_bw = ImageOps.autocontrast(img_bw, cutoff=2)
+            
+            # 3. Crop/resize to 16:9 aspect ratio
+            width, height = img_bw.size
+            target_ratio = 16 / 9  # 1.778
+            current_ratio = width / height
+            
+            if current_ratio > target_ratio:
+                # Image too wide, crop left/right
+                new_width = int(height * target_ratio)
+                left = (width - new_width) // 2
+                img_bw = img_bw.crop((left, 0, left + new_width, height))
+            elif current_ratio < target_ratio:
+                # Image too tall, crop top/bottom
+                new_height = int(width / target_ratio)
+                top = (height - new_height) // 2
+                img_bw = img_bw.crop((0, top, width, top + new_height))
+            
+            # Save with high quality
+            img_bw.save(output_path, format="JPEG", quality=95)
+            
+            final_width, final_height = img_bw.size
+            print(f"   ✅ Image Saved: {output_path}")
+            print(f"   📐 Size: {final_width}x{final_height} (16:9)")
+            print(f"   🎨 Effect: B&W + Contrast Enhanced")
+            return True
+        except Exception as e:
+            print(f"   ❌ Save Error: {e}")
+            return False
+    
+    def _generate_image_legacy_core(self, prompt: str) -> bool:
+        """Core legacy image generation logic (preserve existing third-party API code)"""
         OUT_PATH = Path(ASSETS_DIR) / "cover.jpg"
-        MODEL = "[A]gemini-3-pro-image-preview" # As requested
+        MODEL = "[A]gemini-3-pro-image-preview"
         IMAGE_SIZE = "2K"
         BASE_URL = self.image_base
 
         print(f"🖌️ Generating Image via {BASE_URL}...")
         print(f"   Prompt: {prompt[:50]}...")
 
-        # Construct Content
         contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
         config = types.GenerateContentConfig(
             response_modalities=["IMAGE", "TEXT"],
@@ -168,7 +370,8 @@ class ImageFactory:
             except Exception as e2:
                 print(f"   ❌ Image Gen Failed: {e2}")
                 return False
-
+        
+        # Extract image bytes from response
         image_bytes: bytes | None = None
         texts: list[str] = []
         candidates = getattr(response, "candidates", None) or []
@@ -209,33 +412,25 @@ class ImageFactory:
             if image_bytes is None:
                 print("   ❌ Downloaded URLs, but got empty data.")
                 return False
-
-        # Save Image
-        try:
-            OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-            # Resize/Crop to 5:2 if possible?
-            # 2K is likely 2048x2048 or 2048xSomething.
-            # User workflow asks for 5:2 coverage.
-            # Let's just save it first. Crop logic can be added if needed.
-            Image.open(io.BytesIO(image_bytes)).save(OUT_PATH, format="JPEG")
-            print(f"   ✅ Image Saved: {OUT_PATH}")
-            return True
-        except Exception as e:
-            print(f"   ❌ Save Error: {e}")
-            return False
+        
+        # Use shared save and process method
+        return self._save_and_process_image(image_bytes, OUT_PATH)
 
     def generate_article_cover(self, news_content: str) -> str:
         """
         Main entry point.
         """
-        # 1. Get Concept
-        concept = self._get_visual_concept(news_content)
+        # 1. Get Prompts (returns dict with 'prompt' and 'negative_prompt')
+        prompt_data = self._get_visual_concept(news_content)
         
-        # 2. Add Style Suffix
-        style_suffix = "High-contrast black and white ink illustration. Style of vintage woodcut, etching, and copperplate engraving. Use stippling and cross-hatching. No colors, strictly monochrome. Surreal, intricate details, mysterious atmosphere. Similar to M.C. Escher or Gustave Doré."
-        final_prompt = f"{concept}. {style_suffix}"
+        # 2. Extract main prompt
+        final_prompt = prompt_data.get("prompt", "")
         
-        # 3. Generate
+        if not final_prompt:
+            print("⚠️ No valid prompt generated")
+            return ""
+        
+        # 3. Generate Image
         success = self._generate_image(final_prompt)
         
         target_path = ASSETS_DIR / "cover.jpg"

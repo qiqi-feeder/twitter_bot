@@ -1,0 +1,17 @@
+======================================================================
+完整封面图提示词
+======================================================================
+
+【主提示词 (Prompt)】
+A high-contrast black-and-white intaglio etching in a 16:9 aspect ratio, depicting a Victorian-era allegory titled 'The Monetary Inspector.' The protagonist, a tall and gaunt silhouette wearing a scholarly frock coat, stands slightly left-of-center. In his hand, he holds a massive, glowing magnifying glass that he uses to scrutinize a giant, crumbling mechanical clock representing the global financial system. The clock's gears are exposed and intricate, filled with dense cross-hatching and stippling details. Opposing the protagonist are several external threats: thick, tangled ticker-tape ribbons winding like serpents around his legs, and large, shadowy reaching hands descending from the dark sky, symbolizing political interference and institutional pressure. The background is a textured abyss of turbulent clouds and fine etched lines. The foreground features sharp, crisp linework of a stone ledge. The entire composition uses the woodcut engraving aesthetic with no gradients, relying solely on line density for shading. There is a clear dark area at the bottom for future title placement. NO readable text, NO letters, NO words, NO watermarks, NO logos, NO signatures, NO QR codes. No color, no photorealism, no modern digital interfaces.
+
+【负面提示词 (Negative Prompt)】
+color, photorealism, photography, 3d render, modern UI, text, letters, words, alphabet, signature, watermark, logo, smooth gradients, blurry, soft edges, cartoon, cute, neon, identifiable real persons, modern branding.
+
+======================================================================
+提示词结构说明：
+- 16:9 横版封面插画
+- 黑白木刻/蚀刻风格
+- 全画幅高细节，密集交叉线影
+- 禁止文字、logo、水印
+======================================================================

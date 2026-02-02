@@ -14,6 +14,10 @@ GEMINI_TEXT_BASE_URL = os.getenv("GEMINI_TEXT_BASE_URL", "https://api.aifuwu.icu
 GEMINI_IMAGE_API_KEY = os.getenv("GEMINI_IMAGE_API_KEY") # Orig: BANANA_API_KEY
 GEMINI_IMAGE_BASE_URL = os.getenv("GEMINI_IMAGE_BASE_URL", "https://apialt.mmw.ink").rstrip("/")
 
+# 3. Official Google Gemini API (Direct)
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Official API key
+USE_OFFICIAL_GEMINI = os.getenv("USE_OFFICIAL_GEMINI", "true").lower() == "true"  # Toggle: true=official, false=third-party
+
 # Project Base Paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = BASE_DIR / "assets"

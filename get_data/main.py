@@ -83,14 +83,14 @@ CATEGORY_SCORES = {
     "其他": 50
 }
 
-# 映射 Category 到早报栏目
+# 映射 Category 到早报栏目（已移除序号）
 SECTION_MAP = {
-    "政府": "━━ 一、精选头条 ━━",
-    "金融": "━━ 一、精选头条 ━━",
-    "交易所": "━━ 二、项目动态 ━━",
-    "媒体": "━━ 三、市场观察 ━━",
-    "其他": "━━ 三、市场观察 ━━",
-    "链上": "━━ 四、链上侦探 ━━"
+    "政府": "━━ 精选头条 ━━",
+    "金融": "━━ 精选头条 ━━",
+    "交易所": "━━ 项目动态 ━━",
+    "媒体": "━━ 市场观察 ━━",
+    "其他": "━━ 市场观察 ━━",
+    "链上": "━━ 链上侦探 ━━"
 }
 
 def get_base_score(category_name):
@@ -473,10 +473,10 @@ def assemble_daily_briefing(events, title_prefix="币圈早报", quotas=None):
     # 1. Bucket events by Section
     # Order matters for the final output
     section_buckets = {
-        "━━ 一、精选头条 ━━": [],
-        "━━ 二、项目动态 ━━": [],
-        "━━ 三、市场观察 ━━": [],
-        "━━ 四、链上侦探 ━━": []
+        "━━ 精选头条 ━━": [],
+        "━━ 项目动态 ━━": [],
+        "━━ 市场观察 ━━": [],
+        "━━ 链上侦探 ━━": []
     }
     
     # 2. Distribute (High Score First)
@@ -489,34 +489,46 @@ def assemble_daily_briefing(events, title_prefix="币圈早报", quotas=None):
     if quotas is None:
         # Default for Tweet (Short)
         quotas = {
-            "━━ 一、精选头条 ━━": 8,
-            "━━ 二、项目动态 ━━": 4,
-            "━━ 三、市场观察 ━━": 3,
-            "━━ 四、链上侦探 ━━": 3
+            "━━ 精选头条 ━━": 8,
+            "━━ 项目动态 ━━": 4,
+            "━━ 市场观察 ━━": 3,
+            "━━ 链上侦探 ━━": 3
         }
     
-    # Use Dynamic Title
-    current_time_str = datetime.now(CN_TZ).strftime('%Y/%m/%d %H:%M')
-    final_text = f"Crypto Market Aggregator | {title_prefix} [{current_time_str}]\n\n"
+    # 4. Generate Text with Dynamic Reading Time
+    order = ["━━ 精选头条 ━━", "━━ 项目动态 ━━", "━━ 市场观察 ━━", "━━ 链上侦探 ━━"]
     
-    # 4. Generate Text
-    order = ["━━ 一、精选头条 ━━", "━━ 二、项目动态 ━━", "━━ 三、市场观察 ━━", "━━ 四、链上侦探 ━━"]
-    
+    # Count total items and build content
+    total_items = 0
+    content_body = ""
     for section_name in order:
         candidates = section_buckets[section_name]
-        limit = quotas.get(section_name, 999) # Default to high if not specified in custom quotas
-        
-        # Select Top N by Score first
+        limit = quotas.get(section_name, 999)
         selected_items = candidates[:limit]
         
         if not selected_items: continue
         
-        final_text += f"{section_name}\n"
+        total_items += len(selected_items)
+        content_body += f"{section_name}\n\n"
         for i, item in enumerate(selected_items, 1):
-            fused = item.get("Fused_Text", item["Original_Text"])
-            final_text += f"{i}. {fused}\n"
-        final_text += "\n"
-        
+            fused = item.get("Fused_Text", item.get("Original_Text", ""))
+            content_body += f"{i}、{fused}\n\n"
+        content_body += "\n"
+    
+    # Calculate reading time: 8 seconds per item
+    # 60 items × 8s = 480s = 8 minutes
+    total_seconds = total_items * 8
+    reading_minutes = max(1, round(total_seconds / 60))
+    
+    # Custom Header with OKOX Branding + Dynamic Reading Time
+    final_text = f"""源自 X Layer 链 OKOX 社区，你的 AI 独家顾问
+本文预计阅读 {reading_minutes} 分钟
+
+点击今日链上真实信号 👇
+
+"""
+    final_text += content_body
+    
     return final_text
 
 # ==========================================
@@ -535,10 +547,10 @@ async def generate_article_content(hours=12):
     # Distribute roughly: 
     # Headlines: 10, Projects: 15, Market: 25, Onchain: 10 = 60
     article_quotas = {
-        "━━ 一、精选头条 ━━": 10,
-        "━━ 二、项目动态 ━━": 15,
-        "━━ 三、市场观察 ━━": 25,
-        "━━ 四、链上侦探 ━━": 10
+        "━━ 精选头条 ━━": 10,
+        "━━ 项目动态 ━━": 15,
+        "━━ 市场观察 ━━": 25,
+        "━━ 链上侦探 ━━": 10
     }
     
     content = assemble_daily_briefing(items, title_prefix="深度日报", quotas=article_quotas)
